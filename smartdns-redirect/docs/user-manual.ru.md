@@ -174,7 +174,7 @@ Client (10.0.0.42) → UDP :53 → br0/br1/nwg1
 
 Keenetic периодически flush'ит iptables через свои netfilter hooks. Симлинк `/opt/etc/ndm/netfilter.d/smartdns-redirect-hook` вызывается при каждом flush — **правила восстанавливаются немедленно**.
 
-### Watchdog
+### Сторож
 
 Cron каждые 5 минут запускает `watchdog.sh`:
 

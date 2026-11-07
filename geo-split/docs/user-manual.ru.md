@@ -117,12 +117,17 @@ vi /opt/keenetic-entware-extras/geo-split/config/config.conf
 
 | Значение | Поведение |
 |----------|-----------|
-| `"auto"` (по умолч.) | Автоопределение ISP-интерфейса из `ip route show default` |
+| `"auto"` (по умолч.) | Первый default, который не туннель и не мост `br*`. Сначала основная таблица, затем `ip route show table all` |
 | `"lte_br0"` | Через LTE-модем |
 | `"nwg0"` | Через WireGuard/AmneziaWG |
 | `"ppp0"` | Через PPP-соединение |
+| `"eth3"` | Через конкретный Ethernet, имя на роутере своё |
 
-> 💡 `"auto"` — рекомендация для типичного сценария раздельной маршрутизации.
+> 💡 `"auto"` пропускает туннель. Если основной маршрут — VPN, зона не уходит в него, пока в таблицах виден default провайдера. Явное имя интерфейса от этого поиска не зависит. Если указанный интерфейс лежит, хук снимает правила и не переключается на другой выход.
+
+Экран сценария в webui записывает зону `eas`, имя найденного провайдера в `ROUTE_OUT` и `ROUTE_IN=br0`. Приоритет соединений Keenetic он не меняет. Проверка `tunnel-check.sh` только смотрит, открывается ли через интерфейс `http://1.1.1.1/cdn-cgi/trace`. Ответ HTTP 2xx или 3xx считается успехом. Маршруты, firewall и приоритет скрипт не трогает. Запуск: `tunnel-check.sh --json` для основного маршрута или `tunnel-check.sh --json nwg0` для имени. Имя — только `[a-z0-9_]`, не длиннее 15 символов.
+
+`ladder.sh` тоже только читает: глобальные соединения, уже настроенный `ping-check` и устройство основного маршрута. Curl в нём нет. Экран сценария показывает эту лестницу и обновляет её сам.
 
 #### ROUTE_GW — шлюз для маршрутов
 
@@ -141,9 +146,11 @@ vi /opt/keenetic-entware-extras/geo-split/config/config.conf
 | Значение | Описание |
 |----------|----------|
 | `"br0"` (по умолч.) | Только домашняя сеть |
-| `"br0 br1"` | Домашняя + гостевая сеть |
+| `"br0 br1"` | Домашняя и гостевая сеть |
 
-### GEO-зона (multi-zone)
+Интерфейс, которого нет в `ROUTE_IN`, не получает правила geo-split и целиком идёт по основному маршруту Keenetic. Экран сценария оставляет в списке только `br0`.
+
+### Гео-зона
 
 Главный параметр, определяющий **какие страны** маршрутизировать:
 
@@ -351,12 +358,12 @@ route-check.sh --json ozon.ru
 
 | Символ | Значение |
 |--------|----------|
-| `⇒` (geo-split) | Трафик идёт через geo-split (domain table или subnet table) |
+| `⇒` (geo-split) | Трафик идёт через geo-split (таблица доменов или таблица подсетей) |
 | `⊙` (tunnel) | Трафик идёт через туннель (политика клиента) |
 | `⚠` (mixed) | CDN — разные IP идут разными путями |
 | `→` (default) | Трафик идёт по маршруту по умолчанию |
 
-> 💡 **В WebUI**: Route Check доступен через кнопку «Диагностика» → «Route Check» на дашборде.
+> 💡 В панели кнопка «Проверка маршрута» на карточке «Разделение по странам».
 
 ### Управление списком доменов
 
@@ -471,10 +478,10 @@ geo-split status: ✗ Fail
 # Посмотреть ip rules
 /opt/sbin/ip rule show
 
-# Посмотреть domain routes (table 1000)
+# Посмотреть маршруты доменов (table 1000)
 /opt/sbin/ip route show table 1000 | head -20
 
-# Посмотреть subnet routes (table 1001)
+# Посмотреть маршруты подсетей (table 1001)
 /opt/sbin/ip route show table 1001 | wc -l
 
 # Проверить маршрут конкретного IP
@@ -504,23 +511,23 @@ dmesg | grep geo-split
 
 ## Как это работает
 
-### Архитектура: route-based (без iptables)
+### Архитектура: через маршруты (без iptables)
 
-geo-split **не использует** iptables MARK/mangle (чтобы не конфликтовать с Keenetic NDM per-device routing). Вместо этого — policy routing:
+geo-split **не использует** iptables MARK/mangle, чтобы не конфликтовать с маршрутизацией Keenetic по устройствам. Вместо этого — политика `ip rule`:
 
-1. `ip rule add iif br0 table 1000 priority 50` — domain routes (/32 host)
-2. `ip rule add iif br0 table 1001 priority 51` — subnet routes (GeoIP CIDRs)
+1. `ip rule add iif br0 table 1000 priority 50` — маршруты доменов (хосты /32)
+2. `ip rule add iif br0 table 1001 priority 51` — маршруты подсетей (CIDR GeoIP)
 3. Трафик, не попавший ни в один маршрут, идёт обычным путём
 
-Domain table (prio 50) проверяется **первой** → можно точечно маршрутизировать домены поверх целых подсетей.
+Таблица доменов (приоритет 50) проверяется **первой**: отдельный домен можно направить иначе, чем всю подсеть.
 
 ### Потоки данных
 
 ```
-Boot:           update-subnets & update-domains (параллельно) → attach-rules
-Cron (15 мин):  update-subnets & update-domains (параллельно, если кэш устарел)
-Interface Up:   update-subnets --refill & update-domains --refill → attach-rules
-Interface Down: detach-rules
+Загрузка:            update-subnets и update-domains (параллельно) → attach-rules
+Cron (15 мин):       update-subnets и update-domains (параллельно, если кэш устарел)
+Интерфейс поднялся:  update-subnets --refill и update-domains --refill → attach-rules
+Интерфейс упал:      detach-rules
 ```
 
 ---
@@ -532,6 +539,8 @@ opkg upgrade geo-split
 ```
 
 Конфигурация (`config/config.conf`) сохраняется при обновлении.
+
+`opkg upgrade geo-split` заменяет скрипты версией из фида. `tunnel-check.sh` в фид оригинала не входит. После обновления положите файл из этого репозитория снова. `config.conf` сохранится.
 
 ---
 

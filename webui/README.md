@@ -1,117 +1,117 @@
 # webui
 
-> 📖 **[User Manual (RU)](docs/user-manual.ru.md)** — step-by-step installation, configuration, troubleshooting.
+> 📖 **[Руководство пользователя](docs/user-manual.ru.md)** — пошаговая установка, настройка и устранение неполадок.
 
-Monitoring web panel for Keenetic/Entware — service status dashboard + stock WebUI patching with custom menu and card injection.
+Веб-панель мониторинга для Keenetic/Entware — дашборд статуса служб и патч штатного WebUI со своим меню и вставкой карточек.
 
-Typical use cases:
-- 📊 **Monitoring:** unified status dashboard for geo-split, smartdns-geo-conf, smartdns-redirect, system (uptime, RAM, disk)
-- 🎨 **Integration:** Entware Extras card on stock Keenetic dashboard + Cards Position dialog via inject.js (dashboard card + optional sidebar, `INJECT_SIDEBAR=0` by default)
-- 🔌 **API:** JSON endpoints for automation and monitoring via Lua
+Типичные сценарии:
+- 📊 **Мониторинг:** единый дашборд статуса для geo-split, smartdns-geo-conf, smartdns-redirect и системы (uptime, RAM, диск)
+- 🎨 **Интеграция:** карточка Entware Extras на штатном дашборде Keenetic и диалог расположения карточек через inject.js (карточка на дашборде и необязательный сайдбар, по умолчанию `INJECT_SIDEBAR=0`)
+- 🔌 **API:** эндпоинты JSON для автоматизации и мониторинга через Lua
 
-## Installation
+## Установка
 
-Requires [opkg repository](../releases/README.md) configured.
+Нужен настроенный [репозиторий opkg](../releases/README.md).
 
 ```sh
 opkg install webui
 ```
 
-Dependencies (`keenetic-entware-extras`, `nginx`, `nginx-mod-lua`, `logrotate`) are installed automatically.
+Зависимости (`keenetic-entware-extras`, `nginx`, `nginx-mod-lua`, `logrotate`) ставятся автоматически.
 
-> `config/nginx.conf`, `config/logrotate.conf`, `config/config.conf` — conffiles: preserved during `opkg upgrade`.
+> `config/nginx.conf`, `config/logrotate.conf`, `config/config.conf` — conffiles: сохраняются при `opkg upgrade`.
 
-After installation:
+После установки:
 
 ```sh
-# Dashboard is available immediately (postinst starts the service)
-# Custom dashboard:
+# Дашборд доступен сразу (postinst запускает службу)
+# Свой дашборд:
 curl http://<router-ip>:8080/custom/
 
-# Patched stock WebUI:
+# Пропатченный штатный WebUI:
 curl http://<router-ip>:8080/
 ```
 
-## Removal
+## Удаление
 
 ```sh
 opkg remove webui
 ```
 
-Automatically performs: nginx-webui stop, htdocs-cache removal, init script and logrotate config deletion. Logs are preserved for inspection.
+Автоматически выполняется: остановка nginx-webui, удаление htdocs-cache, удаление init-скрипта и конфигурации logrotate. Журналы сохраняются для проверки.
 
-## Architecture
+## Архитектура
 
-A separate nginx instance on port `:8080`, independent of stock Keenetic httpd (:80). Stock UI is patched in tmpfs on start/reload — no modification of original files.
+Отдельный экземпляр nginx на порту `:8080`, независимый от штатного httpd Keenetic (:80). Штатный UI патчится в tmpfs при start/reload — исходные файлы не изменяются.
 
 ```
-Browser → nginx :8080
-  ├── /custom/*     → static (custom dashboard, JS/CSS)
+Браузер → nginx :8080
+  ├── /custom/*     → статика (свой дашборд, JS/CSS)
   ├── /api/*        → content_by_lua (api-router.lua) → shell → JSON
-  ├── /auth, /rci/  → proxy_pass 127.0.0.1:80 (stock httpd, WebSocket)
-  └── /*            → static webui/htdocs-cache/ (patched bundles) + @stock /usr/share/htdocs_ (flash)
-                      └── patch-stock-ui.sh: inject.js + inject.css + auto-detected bundle patches
+  ├── /auth, /rci/  → proxy_pass 127.0.0.1:80 (штатный httpd, WebSocket)
+  └── /*            → статика webui/htdocs-cache/ (пропатченные бандлы) + @stock /usr/share/htdocs_ (flash)
+                      └── patch-stock-ui.sh: inject.js + inject.css + автоопределённые патчи бандла
 ```
 
-### Stock UI patching
+### Патч штатного UI
 
-On `start` or `reload`, script `patch-stock-ui.sh`:
+При `start` или `reload` скрипт `patch-stock-ui.sh`:
 
-1. Copies only bundle files (`index.html`, `main-*.js`, `polyfills-*.js`, `styles-*.css`) from `/usr/share/htdocs_/` → `webui/htdocs-cache/`
-2. Patches `index.html` — injects `<script>` and `<link>` tags (`inject.js`, `inject.css`)
-3. Auto-detects patch family from architecture markers in the stock bundle
-4. Sources `patches/families/<family>.sh` and applies patches with the runtime-detected enum
-5. On any patch failure: rolls back to clean stock bundle
-6. Pre-compresses bundles with gzip for `gzip_static`
-7. Writes `webui/htdocs-cache/.patch-state` for `status.sh`
-8. nginx serves patched files from htdocs-cache/, unpatched files via `@stock` fallback from flash
+1. Копирует только файлы бандла (`index.html`, `main-*.js`, `polyfills-*.js`, `styles-*.css`) из `/usr/share/htdocs_/` → `webui/htdocs-cache/`
+2. Патчит `index.html` — вставляет теги `<script>` и `<link>` (`inject.js`, `inject.css`)
+3. Автоматически определяет семейство патча по архитектурным маркерам в штатном бандле
+4. Подключает `patches/families/<family>.sh` и применяет патчи с enum, найденным во время выполнения
+5. При любой ошибке патча откатывается к чистому штатному бандлу
+6. Заранее сжимает бандлы gzip для `gzip_static`
+7. Записывает `webui/htdocs-cache/.patch-state` для `status.sh`
+8. nginx отдаёт пропатченные файлы из htdocs-cache/, непропатченные — через запасной `@stock` с flash
 
-**Auto-detection** — the script greps the stock bundle for `Xx={INTERNET:"INTERNET"` (the DashboardSection enum definition), then detects the patch **family** from architecture markers:
+**Автоопределение** — скрипт ищет в штатном бандле `Xx={INTERNET:"INTERNET"` (определение enum DashboardSection), затем определяет **семейство** патча по архитектурным маркерам:
 
-| Family | Marker | Firmware |
-|--------|--------|----------|
+| Семейство | Маркер | Прошивка |
+|-----------|--------|----------|
 | `signal` | `this.templateMap().get` | KeeneticOS 5.1.0+ |
 | `setter` | `set order(e){this.elementsOrder=e}` | KeeneticOS 5.0.x |
 
-Enum renames (minifier changes) are handled automatically — no package update needed. See [patches/README.md](patches/README.md).
+Переименования enum (изменения минификатора) обрабатываются автоматически — обновление пакета не нужно. См. [patches/README.md](patches/README.md).
 
-## Management commands
+## Команды управления
 
 ```sh
 /opt/etc/init.d/S80nginx-webui <command>
 ```
 
-| Command | Action |
-|---------|--------|
-| `start` | Patches stock UI (`patch-stock-ui.sh`) + starts nginx-webui |
-| `stop` | Stops nginx-webui + removes `webui/htdocs-cache` |
+| Команда | Действие |
+|---------|----------|
+| `start` | Патчит штатный UI (`patch-stock-ui.sh`) и запускает nginx-webui |
+| `stop` | Останавливает nginx-webui и удаляет `webui/htdocs-cache` |
 | `restart` | `stop` + `start` |
-| `reload` | Re-patch + `nginx -s reload` (for updates after firmware upgrade) |
-| `check` / `status` | Check status (running/not running) |
+| `reload` | Повторный патч + `nginx -s reload` (для обновлений после обновления прошивки) |
+| `check` / `status` | Проверка статуса (запущен / не запущен) |
 
-Detailed diagnostics:
+Подробная диагностика:
 
 ```sh
 /opt/keenetic-entware-extras/webui/scripts/status.sh
 /opt/keenetic-entware-extras/webui/scripts/status.sh --json
 ```
 
-## Configuration
+## Конфигурация
 
-Config file: `config/config.conf`
+Файл конфигурации: `config/config.conf`
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `ENABLED` | `"yes"` | Enable/disable service (`"yes"` / `"no"`) |
-| `LISTEN_PORT` | `8080` | nginx-webui port |
-| `INJECT_SIDEBAR` | `0` | Sidebar menu injection into stock UI (0/1) |
-| `DASH_POLL_INTERVAL` | `30000` | Dashboard API polling interval (ms) |
-| `PIDFILE` | `/opt/tmp/nginx-webui.pid` | PID file (tmpfs — reset on reboot) |
-| `LOG_TAG` | `"kee-webui"` | Tag for logger |
+| Параметр | По умолчанию | Описание |
+|----------|--------------|----------|
+| `ENABLED` | `"yes"` | Включить или выключить службу (`"yes"` / `"no"`) |
+| `LISTEN_PORT` | `8080` | Порт nginx-webui |
+| `INJECT_SIDEBAR` | `0` | Вставка меню в сайдбар штатного UI (0/1) |
+| `DASH_POLL_INTERVAL` | `30000` | Интервал опроса API дашборда (мс) |
+| `PIDFILE` | `/opt/tmp/nginx-webui.pid` | PID-файл (tmpfs — сбрасывается при перезагрузке) |
+| `LOG_TAG` | `"kee-webui"` | Метка для logger |
 
-> **Listen address:** generated in `config/listen.conf` during `postinst` (via `detect_router_ip`) + `listen 127.0.0.1:8080`. No hardcoded IP.
+> **Адрес прослушивания:** создаётся в `config/listen.conf` во время `postinst` (через `detect_router_ip`) + `listen 127.0.0.1:8080`. IP в коде не зашит.
 
-After changing config:
+После изменения конфигурации:
 
 ```sh
 /opt/etc/init.d/S80nginx-webui restart
@@ -119,80 +119,82 @@ After changing config:
 
 ## API
 
-All endpoints are served via `content_by_lua_file api-router.lua`.
+Все эндпоинты обслуживаются через `content_by_lua_file api-router.lua`.
 
-### GET (status)
+### GET (статус)
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/system/info` | System info (hostname, uptime, RAM, disk) |
-| GET | `/api/system/zones` | Geo-zone list for dropdown (TTL 1h) |
-| GET | `/api/system/dns-providers` | DNS providers for config editor (TTL 1h) |
-| GET | `/api/geo-split/status` | geo-split status |
-| GET | `/api/smartdns/status` | smartdns-geo-conf status |
-| GET | `/api/smartdns-redirect/status` | smartdns-redirect status |
-| GET | `/api/webui/status` | webui self-diagnostics |
+| Метод | Эндпоинт | Описание |
+|-------|----------|----------|
+| GET | `/api/system/info` | Сведения о системе (hostname, uptime, RAM, диск) |
+| GET | `/api/system/zones` | Список геозон для выпадающего списка (TTL 1 ч) |
+| GET | `/api/system/dns-providers` | DNS-провайдеры для редактора конфигурации (TTL 1 ч) |
+| GET | `/api/geo-split/status` | Статус geo-split |
+| GET | `/api/smartdns/status` | Статус smartdns-geo-conf |
+| GET | `/api/smartdns-redirect/status` | Статус smartdns-redirect |
+| GET | `/api/webui/status` | Самодиагностика webui |
 
-### POST (actions)
+### POST (действия)
 
-Return `405 Method Not Allowed` if called via non-POST.
+Возвращают `405 Method Not Allowed`, если вызваны не методом POST.
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/geo-split/start` | Start geo-split |
-| POST | `/api/geo-split/stop` | Stop geo-split |
-| POST | `/api/smartdns/start` | Enable smartdns config |
-| POST | `/api/smartdns/stop` | Disable smartdns config |
-| POST | `/api/smartdns-redirect/start` | Start dns-redirect |
-| POST | `/api/smartdns-redirect/stop` | Stop dns-redirect |
-| POST | `/api/geo-split/update-subnets` | Update subnets (background) |
-| POST | `/api/geo-split/update-domains` | Update domains (background) |
-| POST | `/api/webui/flush-cache` | Flush UI status cache (force fresh data) |
-| POST | `/api/smartdns/flush-cache` | Flush SmartDNS persistent cache (stop + rm + restart) |
+| Метод | Эндпоинт | Описание |
+|-------|----------|----------|
+| POST | `/api/geo-split/start` | Запустить geo-split |
+| POST | `/api/geo-split/stop` | Остановить geo-split |
+| POST | `/api/smartdns/start` | Включить конфигурацию smartdns |
+| POST | `/api/smartdns/stop` | Выключить конфигурацию smartdns |
+| POST | `/api/smartdns-redirect/start` | Запустить dns-redirect |
+| POST | `/api/smartdns-redirect/stop` | Остановить dns-redirect |
+| POST | `/api/geo-split/update-subnets` | Обновить подсети (в фоне) |
+| POST | `/api/geo-split/update-domains` | Обновить домены (в фоне) |
+| POST | `/api/webui/flush-cache` | Сбросить кэш статуса UI (принудительно свежие данные) |
+| POST | `/api/smartdns/flush-cache` | Сбросить постоянный кэш SmartDNS (stop + rm + restart) |
 
-### GET/POST (configuration)
+### GET/POST (конфигурация)
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/{service}/config` | Read current service configuration |
-| POST | `/api/{service}/config` | Save configuration + restart service |
+| Метод | Эндпоинт | Описание |
+|-------|----------|----------|
+| GET | `/api/{service}/config` | Прочитать текущую конфигурацию службы |
+| POST | `/api/{service}/config` | Сохранить конфигурацию и перезапустить службу |
 
-### GET (diagnostics)
+### GET (диагностика)
 
-Rate-limited: 1 request/sec per IP (nginx `limit_req`).
+`route-check` и `dns-check` ограничены 2 запросами в секунду на IP, всплеск 10. `tunnel-check` и `ladder` в это ограничение не входят. `ladder` без curl, экран сценария спрашивает его примерно раз в 30 секунд.
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/geo-split/route-check?host=...&from=...` | Route check to host (from: client MAC or `local`) |
-| GET | `/api/smartdns/dns-check?host=...` | DNS diagnostics: zone, upstream, resolution |
-| GET | `/api/geo-split/wan-paths` | WAN path list (for diagram) |
-| GET | `/api/system/clients` | Client list with routing policies |
-| GET | `/api/system/interfaces` | Network interfaces with labels |
+| Метод | Эндпоинт | Описание |
+|-------|----------|----------|
+| GET | `/api/geo-split/ladder` | Лестница соединений Keenetic: приоритет, `ping-check`, кто сейчас основной. Только чтение, без curl |
+| GET | `/api/geo-split/tunnel-check` | Проходит ли трафик через интерфейс основного маршрута. `?dev=` задаёт имя `[a-z0-9_]`, не длиннее 15 символов. Только чтение |
+| GET | `/api/geo-split/route-check?host=...&from=...` | Проверка маршрута до хоста (from: MAC клиента или `local`) |
+| GET | `/api/smartdns/dns-check?host=...` | Диагностика DNS: зона, upstream, разрешение |
+| GET | `/api/geo-split/wan-paths` | Список путей WAN (для схемы) |
+| GET | `/api/system/clients` | Список клиентов с политиками маршрутизации |
+| GET | `/api/system/interfaces` | Сетевые интерфейсы с подписями |
 
-### Response format
+### Формат ответа
 
 **system/info:**
 ```json
 {"ok":true,"hostname":"Keenetic","uptime":"5d 3h 12m","memory":{"total_kb":262144,"available_kb":180000},"disk_opt":{"total_kb":7654321,"used_kb":1234567,"free_kb":6419754}}
 ```
 
-**status endpoints:** direct JSON from `status.sh --json`:
+**Эндпоинты статуса:** JSON напрямую из `status.sh --json`:
 ```json
 {"running":true,"ok":true,"details":{...}}
 ```
 
-**action endpoints:**
+**Эндпоинты действий:**
 ```json
 {"ok":true,"output":"..."}
 ```
 
-## Diagnostics (status.sh)
+## Диагностика (status.sh)
 
 ```sh
 /opt/keenetic-entware-extras/webui/scripts/status.sh
 ```
 
-Example output:
+Пример вывода:
 
 ```
 nginx-webui status:
@@ -216,75 +218,76 @@ nginx-webui status:
     Version:     x.y.z
 ```
 
-**Exit code:** `0` — all OK, `1` — issues detected (✗ in output).
+**Код выхода:** `0` — всё в порядке, `1` — найдены проблемы (✗ в выводе).
 
-## Files
+## Файлы
 
-| File | Purpose |
-|------|---------|
-| `config/config.conf` | Configuration (ENABLED, port, sidebar, poll interval) |
-| `config/nginx.conf` | nginx configuration (listen, proxy, lua paths, gzip) |
-| `config/logrotate.conf` | Logrotate: nginx-webui error log rotation |
-| `config/listen.conf` | Listen address (generated by postinst, not a conffile) |
-| `lua/api-router.lua` | Lua router: /api/* → shell commands → JSON |
-| `lua/serve-index.lua` | (not used in current architecture) |
-| `lua/stock-css-init.lua` | Lua: stock CSS scanning on nginx start |
-| `lua/api-config.lua` | Lua: config read/save for services |
-| `lua/api-data.lua` | Lua: zone/provider data endpoints |
-| `lua/api-system.lua` | Lua: system info, clients, interfaces |
-| `lua/api-utils.lua` | Lua: shared utilities (exec, JSON, caching) |
-| `patches/families/setter.sh` | Auto-detected patch logic for setter-based Angular (5.0.x) |
-| `patches/families/signal.sh` | Auto-detected patch logic for signal-based Angular (5.1.0+) |
-| `scripts/patch-stock-ui.sh` | Copies stock UI to tmpfs and applies patches |
-| `scripts/status.sh` | Diagnostics: process, port, config, HTTP, logrotate |
-| `static/index.html` | Custom dashboard — HTML |
-| `static/app.js` | Custom dashboard — JS (status cards, tabs, API) |
-| `static/app-sysinfo.js` | System info dashboard section |
-| `static/config-schemas.js` | Config Editor field schemas per service |
-| `static/inject-dashboard.js` | Stock dashboard card rendering |
-| `static/shared.js` | Shared utilities EW.* (SERVICE_APIS, formatters, ticker, poller) |
-| `static/inject.js` | Stock UI injection (sidebar, dashboard card, toggle, expand) |
-| `static/inject.css` | Styles for inject.js components |
-| `static/common.css` | Shared styles (update buttons, tooltips) |
-| `static/layout.css` | Custom dashboard layout styles |
-| `static/config-form.js` | Config form rendering (renderDropdown, renderModalForm) |
-| `static/config-editor.js` | Config Editor modal lifecycle, save, reset, events |
-| `static/detail-render.js` | Detail rendering helpers (shared by app.js + inject-dashboard.js) |
-| `static/diagnostics.js` | Route Check & DNS Check modal UI |
-| `static/diag-render.js` | Diagnostic result rendering (route + DNS) |
-| `static/diag-batch.js` | Diagnostic batch table + sequential runner |
-| `static/route-diagram.js` | SVG route diagram |
-| `static/route-diagram.css` | SVG diagram styles |
-| `static/502.html` | Error page when stock httpd is unavailable |
-| `init.d/S80nginx-webui` | Init script (start/stop/restart/check/status/reload) |
+| Файл | Назначение |
+|------|------------|
+| `config/config.conf` | Конфигурация (ENABLED, порт, сайдбар, интервал опроса) |
+| `config/nginx.conf` | Конфигурация nginx (listen, proxy, пути Lua, gzip) |
+| `config/logrotate.conf` | Logrotate: ротация журнала ошибок nginx-webui |
+| `config/listen.conf` | Адрес прослушивания (создаёт postinst, это не conffile) |
+| `lua/api-router.lua` | Маршрутизатор Lua: /api/* → команды shell → JSON |
+| `lua/serve-index.lua` | (в текущей архитектуре не используется) |
+| `lua/stock-css-init.lua` | Lua: сканирование штатного CSS при старте nginx |
+| `lua/api-config.lua` | Lua: чтение и сохранение конфигурации служб |
+| `lua/api-data.lua` | Lua: эндпоинты данных зон и провайдеров |
+| `lua/api-system.lua` | Lua: сведения о системе, клиенты, интерфейсы |
+| `lua/api-utils.lua` | Lua: общие утилиты (exec, JSON, кэширование) |
+| `patches/families/setter.sh` | Автоопределяемая логика патча для Angular на setter (5.0.x) |
+| `patches/families/signal.sh` | Автоопределяемая логика патча для Angular на signal (5.1.0+) |
+| `scripts/patch-stock-ui.sh` | Копирует штатный UI в tmpfs и применяет патчи |
+| `scripts/status.sh` | Диагностика: процесс, порт, конфигурация, HTTP, logrotate |
+| `static/index.html` | Свой дашборд — HTML, сверху экран сценария |
+| `static/scenario.js` | Экран сценария: зона `eas`, выход на провайдера, вход `br0`. Лестница соединений только читается. Приоритет Keenetic не меняет |
+| `static/app.js` | Свой дашборд — JS (карточки статуса, вкладки, API) |
+| `static/app-sysinfo.js` | Секция сведений о системе на дашборде |
+| `static/config-schemas.js` | Схемы полей редактора конфигурации по службам |
+| `static/inject-dashboard.js` | Отрисовка карточки на штатном дашборде |
+| `static/shared.js` | Общие утилиты EW.* (SERVICE_APIS, форматтеры, ticker, poller) |
+| `static/inject.js` | Вставка в штатный UI (сайдбар, карточка дашборда, переключатель, раскрытие) |
+| `static/inject.css` | Стили компонентов inject.js |
+| `static/common.css` | Общие стили (кнопки обновления, подсказки) |
+| `static/layout.css` | Стили раскладки своего дашборда |
+| `static/config-form.js` | Отрисовка формы конфигурации (renderDropdown, renderModalForm) |
+| `static/config-editor.js` | Жизненный цикл модального редактора конфигурации, сохранение, сброс, события |
+| `static/detail-render.js` | Вспомогательная отрисовка подробностей (общее для app.js и inject-dashboard.js) |
+| `static/diagnostics.js` | Модальный UI проверки маршрута и проверки DNS |
+| `static/diag-render.js` | Отрисовка результата диагностики (маршрут и DNS) |
+| `static/diag-batch.js` | Пакетная таблица диагностики и последовательный запуск |
+| `static/route-diagram.js` | SVG-схема маршрута |
+| `static/route-diagram.css` | Стили SVG-схемы |
+| `static/502.html` | Страница ошибки, когда штатный httpd недоступен |
+| `init.d/S80nginx-webui` | Init-скрипт (start/stop/restart/check/status/reload) |
 
-## Logs
+## Журналы
 
-| File | Description |
-|------|-------------|
-| `/tmp/nginx-webui-error.log` | nginx + Lua errors (level: error, tmpfs — lost on reboot) |
-| Access log | Disabled (I/O savings; diagnostics via `status.sh`) |
-| `/opt/etc/logrotate.d/nginx-webui` | Logrotate config (daily, rotate 3, compress, USR1 reopen) |
+| Файл | Описание |
+|------|----------|
+| `/tmp/nginx-webui-error.log` | Ошибки nginx и Lua (уровень: error, tmpfs — теряются при перезагрузке) |
+| Журнал доступа | Отключён (экономия ввода-вывода; диагностика через `status.sh`) |
+| `/opt/etc/logrotate.d/nginx-webui` | Конфигурация logrotate (ежедневно, rotate 3, сжатие, повторное открытие по USR1) |
 
-## Dependencies
+## Зависимости
 
-| Package | Type | Purpose |
-|---------|------|---------|
-| `keenetic-entware-extras` | Depends | Base package (shared libraries) |
-| `nginx` | Depends | Web server |
-| `nginx-mod-lua` | Depends | Lua module for nginx (API, init) |
-| `logrotate` | Depends | Log rotation |
+| Пакет | Тип | Назначение |
+|-------|-----|------------|
+| `keenetic-entware-extras` | Зависит | Базовый пакет (общие библиотеки) |
+| `nginx` | Зависит | Веб-сервер |
+| `nginx-mod-lua` | Зависит | Модуль Lua для nginx (API, init) |
+| `logrotate` | Зависит | Ротация журналов |
 
-## For developers
+## Для разработчиков
 
-Build .ipk:
+Сборка .ipk:
 
 ```sh
 ./scripts/build-ipk.sh webui
-# Result: dist/webui_<ver>_all.ipk
+# Результат: dist/webui_<ver>_all.ipk
 ```
 
-Deploy without .ipk:
+Развёртывание без .ipk:
 
 ```sh
 scp -O -r webui/ root@<router>:/opt/keenetic-entware-extras/webui/

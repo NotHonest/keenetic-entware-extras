@@ -1,137 +1,137 @@
 # smartdns-redirect
 
-> 📖 **[User Manual (RU)](docs/user-manual.ru.md)** — step-by-step installation, configuration, troubleshooting.
+> 📖 **[Руководство пользователя](docs/user-manual.ru.md)** — пошаговая установка, настройка и устранение неполадок.
 
-Universal DNS DNAT for Keenetic/Entware — intercept LAN `:53` and redirect to a local DNS resolver.
+Универсальный DNS DNAT для Keenetic/Entware — перехват LAN `:53` и перенаправление на локальный DNS-резолвер.
 
-## What is this
+## Что это
 
-iptables DNAT on `PREROUTING` for configured interfaces (`br0` LAN, `br1` Guest, `nwg1` WG Server, etc.): all client DNS queries go directly to local DNS (SmartDNS `:6053` by default) instead of Keenetic ndnproxy. The router itself (ndnproxy :53) is **not affected** — works as before.
+iptables DNAT в `PREROUTING` для заданных интерфейсов (`br0` LAN, `br1` Guest, `nwg1` WG Server и т. д.): все DNS-запросы клиентов идут сразу на локальный DNS (по умолчанию SmartDNS `:6053`), а не в ndnproxy Keenetic. Сам роутер (ndnproxy :53) **не затрагивается** — работает как раньше.
 
-**Why:**
-- **Latency** — measured: ~130ms → <80ms on LAN clients (minus hop through ndnproxy).
-- **Split-DNS policy** works for clients directly (SmartDNS decides which upstream to use).
-- **Keenetic integrity** — ndnproxy is not broken, webui/diagnostics are not affected.
+**Зачем:**
+- **Задержка** — замер: ~130 мс → <80 мс у клиентов LAN (минус переход через ndnproxy).
+- **Политика split-DNS** работает для клиентов напрямую (SmartDNS сам выбирает upstream).
+- **Целостность Keenetic** — ndnproxy не ломается, webui и диагностика не страдают.
 
-**Compatible with:**
-- [`smartdns-geo-conf`](../smartdns-geo-conf) (default upstream `:6053`)
+**Совместим с:**
+- [`smartdns-geo-conf`](../smartdns-geo-conf) (upstream по умолчанию `:6053`)
 - AdGuard Home (`UPSTREAM_PORT=5353`)
 - Unbound (`UPSTREAM_PORT=5335`)
-- dnsmasq (any port)
-- [`geo-split`](../geo-split) — works in tandem.
+- dnsmasq (любой порт)
+- [`geo-split`](../geo-split) — работает в паре.
 
-## Requirements
+## Требования
 
-- Keenetic with Entware
-- `opkg install iptables` (installed automatically as dependency)
-- Local DNS resolver on the router listening on UDP/TCP port (default `:6053`)
+- Keenetic с Entware
+- `opkg install iptables` (ставится автоматически как зависимость)
+- Локальный DNS-резолвер на роутере, слушающий порт UDP/TCP (по умолчанию `:6053`)
 
-## Installation
+## Установка
 
-Requires [opkg repository](../releases/README.md) configured.
+Нужен настроенный [репозиторий opkg](../releases/README.md).
 
 ```sh
 opkg install smartdns-redirect
 ```
 
-`postinst` automatically:
-- creates symlink `/opt/etc/ndm/netfilter.d/smartdns-redirect-hook` (rule restoration on `iptables flush` by NDM),
-- adds cron watchdog (`*/5 * * * *`) to `/opt/etc/crontab`,
-- starts `S39smartdns-redirect`.
+`postinst` автоматически:
+- создаёт символическую ссылку `/opt/etc/ndm/netfilter.d/smartdns-redirect-hook` (восстановление правил после `iptables flush` со стороны NDM),
+- добавляет cron watchdog (`*/5 * * * *`) в `/opt/etc/crontab`,
+- запускает `S39smartdns-redirect`.
 
-## Configuration
+## Конфигурация
 
-File: `/opt/keenetic-entware-extras/smartdns-redirect/config/config.conf`
+Файл: `/opt/keenetic-entware-extras/smartdns-redirect/config/config.conf`
 
-> 📝 In `config.conf` specify only parameters that differ from defaults (`defaults.conf`). The file is not created automatically — create it manually if needed. On package update `defaults.conf` is updated, while `config.conf` is not touched.
+> 📝 В `config.conf` указывайте только параметры, которые отличаются от значений по умолчанию (`defaults.conf`). Файл не создаётся автоматически — создайте его вручную, если нужно. При обновлении пакета обновляется `defaults.conf`, а `config.conf` не трогается.
 
 ```sh
 UPSTREAM_PORT=6053         # SmartDNS=6053, AGH=5353, Unbound=5335
-INTERFACES="br0"           # LAN interfaces (space-separated)
-WATCHDOG_SERVICE="S38smartdns"   # init script to restart on failure
-REDIRECT_MODE="force"          # "force"=intercept ALL :53 + block DoT; "local"=only router-IP DNS
-PRESERVE_FILTER_PROFILES=no      # Phase 5 (not implemented)
-# IPv6 DNS handling is fully automatic — no configuration needed.
-# DNAT when SmartDNS has IPv6 bind, REJECT otherwise (Happy Eyeballs fallback).
-# DoT blocking (port 853) is always-on — no configuration needed.
+INTERFACES="br0"           # интерфейсы LAN (через пробел)
+WATCHDOG_SERVICE="S38smartdns"   # init-скрипт, который перезапускать при сбое
+REDIRECT_MODE="force"          # "force"=перехват ВСЕХ :53 + блок DoT; "local"=только DNS на IP роутера
+PRESERVE_FILTER_PROFILES=no      # фаза 5 (не реализовано)
+# Обработка IPv6 DNS полностью автоматическая — настройка не нужна.
+# DNAT, если у SmartDNS есть bind IPv6, иначе REJECT (запасной путь Happy Eyeballs).
+# Блокировка DoT (порт 853) всегда включена — настройка не нужна.
 ```
 
-After changing config:
+После изменения конфигурации:
 
 ```sh
 /opt/etc/init.d/S39smartdns-redirect restart
 ```
 
-## Verification
+## Проверка
 
 ```sh
-# Rules in NAT PREROUTING
+# Правила в NAT PREROUTING
 iptables -t nat -S PREROUTING | grep DNAT
-# Expected (10.0.0.1 = router LAN IP):
+# Ожидается (10.0.0.1 = LAN IP роутера):
 #   -A PREROUTING -i br0 -p udp -m udp --dport 53 -j DNAT --to-destination 10.0.0.1:6053
 #   -A PREROUTING -i br0 -p tcp -m tcp --dport 53 -j DNAT --to-destination 10.0.0.1:6053
 
-# Status
+# Статус
 /opt/etc/init.d/S39smartdns-redirect status
 
-# Logs
+# Журналы
 logread | grep smartdns-redirect
 ```
 
-## How it works
+## Как это работает
 
-### LAN client request flow
+### Путь запроса клиента LAN
 
-All configured interfaces use `DNAT` to br0 IP — this ensures SmartDNS receives the packet regardless of which interface it arrived on. DoT (port 853) is always blocked via `FORWARD REJECT` on the same interfaces — prevents LAN clients from bypassing SmartDNS via direct DNS-over-TLS:
+На всех заданных интерфейсах используется `DNAT` на IP br0 — так SmartDNS получает пакет независимо от того, с какого интерфейса он пришёл. DoT (порт 853) всегда блокируется через `FORWARD REJECT` на тех же интерфейсах — клиенты LAN не могут обойти SmartDNS прямым DNS-over-TLS:
 
 ```
-Client (10.0.0.42) → UDP/TCP :53 → br0/br1/nwg1 →
+Клиент (10.0.0.42) → UDP/TCP :53 → br0/br1/nwg1 →
   [iptables PREROUTING DNAT → 10.0.0.1:6053] →
     SmartDNS (10.0.0.1:6053) → upstream (DoT/DoH/UDP)
 
-Client → TCP :853 → br0/br1/nwg1 →
-  [iptables FORWARD REJECT] → client falls back to :53 → DNAT → SmartDNS
+Клиент → TCP :853 → br0/br1/nwg1 →
+  [iptables FORWARD REJECT] → клиент возвращается на :53 → DNAT → SmartDNS
 ```
 
-The router itself (loopback `127.0.0.1:53`) goes to ndnproxy — LAN interface rules don't apply to it.
+Сам роутер (loopback `127.0.0.1:53`) идёт в ndnproxy — правила интерфейсов LAN на него не действуют.
 
-### NDM resilience
+### Устойчивость к NDM
 
-Keenetic periodically flushes iptables via its netfilter hooks. The symlink in `/opt/etc/ndm/netfilter.d/` calls [`netfilter-hook.sh`](scripts/netfilter-hook.sh) every time NDM touches the tables — rules are immediately restored.
+Keenetic периодически сбрасывает iptables через свои хуки netfilter. Символическая ссылка в `/opt/etc/ndm/netfilter.d/` вызывает [`netfilter-hook.sh`](scripts/netfilter-hook.sh) каждый раз, когда NDM трогает таблицы — правила сразу восстанавливаются.
 
-### Watchdog
+### Сторож
 
-Cron runs [`watchdog.sh`](scripts/watchdog.sh) every 5 minutes:
+Cron запускает [`watchdog.sh`](scripts/watchdog.sh) каждые 5 минут:
 
-1. Checks for rules in `PREROUTING` and `FORWARD` (DoT block) — restores if missing.
-2. Sends a test DNS query to `UPSTREAM_PORT`. If upstream is unresponsive — restarts `WATCHDOG_SERVICE` (default `S38smartdns`).
+1. Проверяет правила в `PREROUTING` и `FORWARD` (блок DoT) — восстанавливает, если их нет.
+2. Отправляет пробный DNS-запрос на `UPSTREAM_PORT`. Если upstream не отвечает — перезапускает `WATCHDOG_SERVICE` (по умолчанию `S38smartdns`).
 
-## Removal
+## Удаление
 
 ```sh
 opkg remove smartdns-redirect
 ```
 
-`prerm` / `postrm` will revert everything: init script, symlink, iptables, cron, PID file, installation directory.
+`prerm` / `postrm` откатывают всё: init-скрипт, символическую ссылку, iptables, cron, PID-файл, каталог установки.
 
-## Architecture
+## Архитектура
 
 ```
 smartdns-redirect/
 ├── config/
-│   ├── defaults.conf               # default values
-│   └── config.conf                  # 🔧 user overrides (create manually if needed)
+│   ├── defaults.conf               # значения по умолчанию
+│   └── config.conf                  # 🔧 переопределения пользователя (создать вручную, если нужно)
 ├── init.d/
 │   └── S39smartdns-redirect        # init (start/stop/restart/status)
 ├── scripts/
-│   ├── dns-redirect.sh             # apply/remove iptables rules
-│   ├── netfilter-hook.sh           # NDM hook: restore on flush
-│   ├── watchdog.sh                 # cron: rule presence + upstream health
-│   └── status.sh                   # diagnostics
+│   ├── dns-redirect.sh             # применить/убрать правила iptables
+│   ├── netfilter-hook.sh           # хук NDM: восстановление после flush
+│   ├── watchdog.sh                 # cron: наличие правил + доступность upstream
+│   └── status.sh                   # диагностика
 └── docs/
     └── user-manual.ru.md
 ```
 
-## License
+## Лицензия
 
-MIT — see [LICENSE](../LICENSE).
+MIT — см. [LICENSE](../LICENSE).

@@ -1,138 +1,138 @@
 # net-check
 
-Network connectivity diagnostics and degradation control for Keenetic/Entware.
+Диагностика сетевого подключения и контроль деградации для Keenetic/Entware.
 
-End-to-end reachability verification across WAN interfaces,
-MITM/DPI anomaly detection, CDN geo-steering analysis,
-DNS leak testing, path quality comparison.
+Сквозная проверка доступности через интерфейсы WAN,
+обнаружение аномалий MITM/DPI, анализ CDN geo-steering,
+тест DNS-утечек, сравнение качества пути.
 
-> 📖 **[User Manual (RU)](docs/user-manual.ru.md)**
+> 📖 **[Руководство пользователя](docs/user-manual.ru.md)**
 
-## Usage
+## Использование
 
 ```sh
-# Full diagnostics (9 steps: geo → conn → ipv6 → dns → dns-leak → comp → cdn → tls → speed)
+# Полная диагностика (9 шагов: geo → conn → ipv6 → dns → dns-leak → comp → cdn → tls → speed)
 net-check.sh all
 
-# Deep check — single resource (HTTP + DNS + TLS + CDN)
+# Глубокая проверка — один ресурс (HTTP + DNS + TLS + CDN)
 net-check.sh check youtube.com
 
-# Deep check — multiple resources (bulk tables)
+# Глубокая проверка — несколько ресурсов (bulk-таблицы)
 net-check.sh check youtube.com google.com github.com
 
-# Per-interface diagnostics
-net-check.sh geo              # Egress point verification (GeoIP)
-net-check.sh conn             # TCP/TLS timing, traceroute, loss, MTU
-net-check.sh ipv6             # IPv6 leak detection
-net-check.sh speed            # Download/upload throughput
+# Диагностика по отдельности
+net-check.sh geo              # Проверка точки выхода (GeoIP)
+net-check.sh conn             # TCP/TLS timing, traceroute, потери, MTU
+net-check.sh ipv6             # Обнаружение IPv6-утечек
+net-check.sh speed            # Пропускная способность download/upload
 
-# Bulk resource checks (all targets from config)
-net-check.sh comp             # HTTP reachability comparison table
-net-check.sh dns              # DNS resolution & ISP filtering
-net-check.sh dns-leak         # DNS leak test (resolver chain discovery)
-net-check.sh cdn              # CDN geo-steering analysis
-net-check.sh tls              # TLS certificate MITM check
+# Массовые проверки ресурсов (все цели из конфигурации)
+net-check.sh comp             # Таблица сравнения HTTP-доступности
+net-check.sh dns              # DNS-резолвинг и фильтрация ISP
+net-check.sh dns-leak         # Тест DNS-утечек (цепочка резолверов)
+net-check.sh cdn              # Анализ CDN geo-steering
+net-check.sh tls              # Проверка TLS-сертификата на MITM
 
-# Single-resource variants
-net-check.sh cdn youtube.com  # CDN analysis for one domain
-net-check.sh tls youtube.com  # TLS check for one host
+# Варианты для одного ресурса
+net-check.sh cdn youtube.com  # Анализ CDN для одного домена
+net-check.sh tls youtube.com  # Проверка TLS для одного хоста
 
-# Bulk checks with custom domains (instead of config)
+# Массовые проверки со своими доменами (вместо конфигурации)
 net-check.sh comp youtube.com google.com
 net-check.sh dns youtube.com google.com
 
-# Options
-net-check.sh --json check youtube.com   # JSON output
-net-check.sh --privacy all              # Anonymize IPs, ASN, geo
-net-check.sh --iface nwg0 comp         # Check via specific interface
-net-check.sh --quiet all                # One-line summary per section
+# Параметры
+net-check.sh --json check youtube.com   # Вывод JSON
+net-check.sh --privacy all              # Анонимизация IP, ASN, geo
+net-check.sh --iface nwg0 comp         # Проверка через указанный интерфейс
+net-check.sh --quiet all                # Однострочная сводка по секции
 ```
 
-## Configuration
+## Конфигурация
 
-- `config/defaults.conf` — default settings (do not edit)
-- `config/config.conf` — user overrides (create if needed)
-- `config/check-targets.conf` — HTTP/DNS/TLS target list
-- `config/cdn-domains.conf` — CDN domains for steering analysis
-- `config/dns-providers.conf` — DNS provider identification
-- `config/anomaly-markers.conf` — ISP anomaly page detection
-- `config/mitm-issuers.conf` — known MITM proxy CA patterns
+- `config/defaults.conf` — настройки по умолчанию (не редактировать)
+- `config/config.conf` — пользовательские переопределения (создать при необходимости)
+- `config/check-targets.conf` — список целей HTTP/DNS/TLS
+- `config/cdn-domains.conf` — домены CDN для анализа geo-steering
+- `config/dns-providers.conf` — определение поставщиков DNS
+- `config/anomaly-markers.conf` — обнаружение страниц аномалий ISP
+- `config/mitm-issuers.conf` — шаблоны известных CA MITM-прокси
 
-All config files are protected from overwrite on package upgrade.
+Все файлы конфигурации защищены от перезаписи при обновлении пакета.
 
-## Exit Codes
+## Коды выхода
 
-- `0` — all checks passed
-- `1` — degraded (some checks failed)
-- `2` — critical failure
+- `0` — все проверки пройдены
+- `1` — деградация (часть проверок не прошла)
+- `2` — критический сбой
 
-## File structure
+## Структура файлов
 
 ```
 net-check/
 ├── config/
-│   ├── defaults.conf           # Default settings (do not edit)
-│   ├── config.conf             # User overrides (create if needed)
-│   ├── check-targets.conf      # HTTP/DNS/TLS target list
-│   ├── check-targets-custom.conf # User custom targets (not overwritten)
-│   ├── cdn-domains.conf        # CDN domains for steering analysis
-│   ├── cdn-domains-custom.conf # User custom CDN domains (not overwritten)
-│   ├── dns-providers.conf      # DNS provider identification
-│   ├── anomaly-markers.conf    # ISP anomaly page detection patterns
-│   ├── mitm-issuers.conf       # Known MITM proxy CA patterns
-│   ├── known-cas.conf          # Known national/regional CAs (allowlist)
-│   ├── privacy-providers.conf  # Privacy provider patterns for anonymization
-│   └── wellknown-ips.conf      # Well-known public DNS resolver IPs
+│   ├── defaults.conf           # Настройки по умолчанию (не редактировать)
+│   ├── config.conf             # Пользовательские переопределения (создать при необходимости)
+│   ├── check-targets.conf      # Список целей HTTP/DNS/TLS
+│   ├── check-targets-custom.conf # Пользовательские цели (не перезаписывается)
+│   ├── cdn-domains.conf        # Домены CDN для анализа geo-steering
+│   ├── cdn-domains-custom.conf # Пользовательские домены CDN (не перезаписывается)
+│   ├── dns-providers.conf      # Определение поставщиков DNS
+│   ├── anomaly-markers.conf    # Шаблоны страниц аномалий ISP
+│   ├── mitm-issuers.conf       # Шаблоны известных CA MITM-прокси
+│   ├── known-cas.conf          # Известные национальные и региональные CA (allowlist)
+│   ├── privacy-providers.conf  # Шаблоны поставщиков для анонимизации
+│   └── wellknown-ips.conf      # IP известных публичных резолверов DNS
 ├── scripts/
-│   ├── net-check.sh            # Main entry point
-│   ├── domain-check.sh         # Shortcut: deep single-resource check
-│   ├── status.sh               # Diagnostics for init.d status
-│   └── lib/                    # Command modules and shared libraries
-│       ├── cmd-all.sh          # "all" command orchestration
-│       ├── cmd-geo.sh          # Egress point verification (GeoIP)
-│       ├── cmd-connectivity.sh # TCP/TLS timing, traceroute, loss, MTU
-│       ├── cmd-ipv6-leak.sh    # IPv6 leak detection
-│       ├── cmd-dns.sh          # DNS resolution & ISP filtering
-│       ├── cmd-dns-leak.sh     # DNS leak test (resolver chain)
-│       ├── cmd-compare.sh      # HTTP reachability comparison table
-│       ├── cmd-cdn.sh          # CDN geo-steering analysis
-│       ├── cmd-tls.sh          # TLS certificate MITM check
-│       ├── cmd-speed.sh        # Download/upload throughput
-│       ├── cmd-check.sh        # Deep single-resource check
-│       ├── batch.sh            # Adaptive batch sizing, parallel runner
-│       ├── wan.sh              # WAN discovery, iface_type
-│       ├── geoip.sh            # IP geolocation API
-│       ├── geo-cache.sh        # Geo cache operations + lookups
-│       ├── zone.sh             # Geo-zone context, routing
-│       ├── http-core.sh        # curl, content check, metrics
-│       ├── verdict.sh          # Failure classification, reason labels
-│       ├── privacy.sh          # Privacy filter (IP/ASN anonymization)
-│       ├── output.sh           # Errors, usage, config reader
-│       ├── sections.sh         # Spinner, banners, verbosity
-│       ├── table.sh            # Table framework
-│       └── colors.sh           # Colors, marks, emoji
+│   ├── net-check.sh            # Основная точка входа
+│   ├── domain-check.sh         # Ярлык: глубокая проверка одного ресурса
+│   ├── status.sh               # Диагностика для статуса init.d
+│   └── lib/                    # Модули команд и общие библиотеки
+│       ├── cmd-all.sh          # Оркестрация команды "all"
+│       ├── cmd-geo.sh          # Проверка точки выхода (GeoIP)
+│       ├── cmd-connectivity.sh # TCP/TLS timing, traceroute, потери, MTU
+│       ├── cmd-ipv6-leak.sh    # Обнаружение IPv6-утечек
+│       ├── cmd-dns.sh          # DNS-резолвинг и фильтрация ISP
+│       ├── cmd-dns-leak.sh     # Тест DNS-утечек (цепочка резолверов)
+│       ├── cmd-compare.sh      # Таблица сравнения HTTP-доступности
+│       ├── cmd-cdn.sh          # Анализ CDN geo-steering
+│       ├── cmd-tls.sh          # Проверка TLS-сертификата на MITM
+│       ├── cmd-speed.sh        # Пропускная способность download/upload
+│       ├── cmd-check.sh        # Глубокая проверка одного ресурса
+│       ├── batch.sh            # Адаптивный размер пакета, параллельный запуск
+│       ├── wan.sh              # Обнаружение WAN, iface_type
+│       ├── geoip.sh            # API геолокации IP
+│       ├── geo-cache.sh        # Операции и поиск в кэше Geo
+│       ├── zone.sh             # Контекст геозоны, маршрутизация
+│       ├── http-core.sh        # curl, проверка содержимого, метрики
+│       ├── verdict.sh          # Классификация сбоев, подписи причин
+│       ├── privacy.sh          # Фильтр приватности (анонимизация IP/ASN)
+│       ├── output.sh           # Ошибки, справка, чтение конфигурации
+│       ├── sections.sh         # Индикатор, баннеры, подробность вывода
+│       ├── table.sh            # Каркас таблиц
+│       └── colors.sh           # Цвета, отметки, emoji
 └── docs/
-    └── user-manual.ru.md       # User manual (Russian)
+    └── user-manual.ru.md       # Руководство пользователя
 ```
 
 ### domain-check.sh
 
-Shortcut for deep single-resource check. Equivalent to `net-check.sh check <domain>`:
+Ярлык глубокой проверки одного ресурса. То же, что `net-check.sh check <domain>`:
 
 ```sh
 domain-check.sh youtube.com
 ```
 
-## Dependencies
+## Зависимости
 
-- `curl` — HTTP checks, GeoIP services, dns-leak test APIs
-- `bind-dig` — DNS/CDN checks, EDNS Client Subnet, dns-leak probing
-- `iputils-ping` — ICMP connectivity, loss/jitter measurement
-- `netcat` (recommended) — TCP connect checks
-- `openssl-util` (recommended) — TLS certificate inspection
-- `traceroute` (optional) — path tracing
+- `curl` — проверки HTTP, сервисы GeoIP, API теста DNS-утечек
+- `bind-dig` — проверки DNS/CDN, EDNS Client Subnet, зондирование DNS-утечек
+- `iputils-ping` — связность ICMP, измерение потерь и jitter
+- `netcat` (рекомендуется) — проверки TCP connect
+- `openssl-util` (рекомендуется) — инспекция TLS-сертификатов
+- `traceroute` (необязательно) — трассировка пути
 
-## Standards
+## Стандарты
 
-Measurement methodology follows ITU-T Y.1540 (IP packet transfer parameters)
-and ITU-T Y.1541 (network performance objectives).
+Методика измерений соответствует ITU-T Y.1540 (параметры переноса IP-пакетов)
+и ITU-T Y.1541 (нормы характеристик сети).

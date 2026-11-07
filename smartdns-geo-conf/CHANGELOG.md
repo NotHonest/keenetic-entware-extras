@@ -1,431 +1,437 @@
-# Changelog
+# Журнал изменений
 
-All notable changes to `smartdns-geo-conf` are documented here.
+Все заметные изменения `smartdns-geo-conf` описаны здесь.
 
-Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/)
-Versioning: [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html)
+Формат: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/)
+Версионирование: [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html)
+
+## [Не выпущено]
+
+Изменения этого форка. В пакеты фида 0xkee они не входят. Номер версии не менялся.
+
+### Добавлено
+- `scripts/dns-tunnel-watch.sh` — раз в минуту ведёт зарубежный DNS за VPN, который сейчас является основным маршрутом. Один интерфейс, без параллельного прямого сервера. Две неудачи текущего туннеля или два наблюдения, что основной маршрут уже не VPN, пересобирают серверы без `-interface`. Когда снова отвечает туннель основного маршрута, привязка возвращается сразу. Приоритет соединений Keenetic, iptables и geo-split скрипт не меняет. Смена маршрута или DNS пишет одну строку в `/opt/var/log/kee-failover.log`, не больше 10 строк. При уходе основного маршрута со старого туннеля сторож закрывает только conntrack этого туннеля
 
 ## [0.15.1] - 2026-09-27
 
-### Fixed
-- **Tunnel health check: skip pseudo-values** — `"default"` and `"*"` in OTHER_DNS_INTERFACES/ZONE_DNS_INTERFACE caused false `warn`/`fail` (no `/sys/class/net/default/operstate`). Both `check_iface_health()` (JSON) and text output tunnel marks now skip WebUI pseudo-values. Fixes yellow card on dashboard when "Default route" is selected alongside real tunnel interfaces.
+### Исправлено
+- **Проверка туннеля: пропуск псевдозначений** — `"default"` и `"*"` в OTHER_DNS_INTERFACES/ZONE_DNS_INTERFACE давали ложные `warn`/`fail` (нет `/sys/class/net/default/operstate`). И `check_iface_health()` (JSON), и текстовые отметки туннелей теперь пропускают псевдозначения WebUI. Исправляет жёлтую карточку на дашборде, когда «Default route» выбран вместе с реальными туннельными интерфейсами.
 
 ## [0.15.0] - 2026-09-27
 
-### Added
-- **Tunnel interface health indicators** — `status.sh` checks operstate of configured tunnel interfaces (OTHER_DNS_INTERFACES + ZONE_DNS_INTERFACE) via sysfs. CLI shows per-interface ✓/✗ marks. JSON adds `checks.iface_health` ("ok"/"warn"/"fail"/"skip") and `details.zone_interface` when ZONE_DNS_INTERFACE is set. All DOWN → fail (STATUS_OK=1), partial DOWN → warn, all UP → ok.
+### Добавлено
+- **Индикаторы состояния туннельных интерфейсов** — `status.sh` проверяет operstate настроенных туннельных интерфейсов (OTHER_DNS_INTERFACES + ZONE_DNS_INTERFACE) через sysfs. CLI показывает отметки ✓/✗ по каждому интерфейсу. JSON добавляет `checks.iface_health` ("ok"/"warn"/"fail"/"skip") и `details.zone_interface`, если задан ZONE_DNS_INTERFACE. Все DOWN → fail (STATUS_OK=1), часть DOWN → warn, все UP → ok.
 
 ## [0.14.4] - 2026-08-30
 
-### Fixed
-- Add missing `bind-dig` to package dependencies — `dns-check.sh` requires `dig` at runtime
+### Исправлено
+- В зависимости пакета добавлен отсутствовавший `bind-dig` — `dns-check.sh` требует `dig` во время работы
 
 ## [0.14.3] - 2026-08-28
 
-### Changed
-- Docs: installation instructions updated for opkg feed — `opkg install smartdns-geo-conf` instead of `.ipk` filenames, opkg repo setup steps in user manual
+### Изменено
+- Документация: инструкции по установке обновлены под ленту opkg — `opkg install smartdns-geo-conf` вместо имён файлов `.ipk`, шаги настройки репозитория opkg в руководстве пользователя
 
 ## [0.14.2] - 2026-08-16
 
-### Changed
-- README: document `DNS_TRANSPORT` parameter in Zone configuration section
-- User manual (RU): add `DNS_TRANSPORT` section with `auto`/`strict` mode descriptions
+### Изменено
+- README: параметр `DNS_TRANSPORT` описан в разделе настройки зоны
+- Руководство пользователя: добавлен раздел `DNS_TRANSPORT` с описанием режимов `auto`/`strict`
 
 ## [0.14.1] - 2026-07-30
 
-### Changed
-- `status.sh`: colored status marks and bold section headers via `lib/status.sh` color system; `--color`/`--no-color` flag support
-- `status.sh`: `dns_test()` migrated from raw `_text_buf` printf to `status_line()` API — consistent format with all other status lines
+### Изменено
+- `status.sh`: цветные отметки статуса и жирные заголовки секций через цветовую систему `lib/status.sh`; поддержка флагов `--color`/`--no-color`
+- `status.sh`: `dns_test()` переведён с прямого printf в `_text_buf` на API `status_line()` — формат совпадает с остальными строками статуса
 
 ## [0.14.0] - 2026-07-30
 
-### Added
-- **`DNS_TRANSPORT` config parameter** — upstream DNS encryption policy: `auto`
-  (default, current behavior — DoT/DoH + UDP fallback) or `strict` (DoT/DoH only,
-  no plain UDP). Use `strict` when DNS privacy matters (e.g., abroad with non-local ISP).
+### Добавлено
+- **Параметр конфигурации `DNS_TRANSPORT`** — политика шифрования upstream DNS: `auto`
+  (по умолчанию, текущее поведение — DoT/DoH и запасной UDP) или `strict` (только DoT/DoH,
+  без открытого UDP). Используйте `strict`, когда важна приватность DNS (например, за границей у нелокального ISP).
 
-### Removed
-- **`SMARTDNS_PORT` removed from WebUI** config editor. Parameter remains in
-  `defaults.conf` and scripts (auto-detect via `/proc/net/tcp` works reliably).
+### Удалено
+- **`SMARTDNS_PORT` убран из редактора конфигурации WebUI**. Параметр остаётся в
+  `defaults.conf` и скриптах (автоопределение через `/proc/net/tcp` работает надёжно).
 
 ## [0.13.0] - 2026-07-29
 
-### Changed
-- **Tunnel interfaces imply no direct fallback**: when `OTHER_DNS_INTERFACES` is
-  set, only tunnel-bound upstream servers are generated — no direct (non-tunnel)
-  fallback. Setting tunnel interfaces IS the privacy policy now.
-- `ZONE_DNS_INTERFACE` behavior unchanged — zone providers always use the
-  configured interface (UDP fallback included), as before.
+### Изменено
+- **Туннельные интерфейсы означают отсутствие прямого запасного пути**: если задан `OTHER_DNS_INTERFACES`,
+  создаются только upstream-серверы, привязанные к туннелю, — без прямого (не через туннель)
+  запасного пути. Сам факт туннельных интерфейсов теперь и есть политика приватности.
+- Поведение `ZONE_DNS_INTERFACE` не изменилось — зональные провайдеры всегда используют
+  заданный интерфейс (включая запасной UDP), как и раньше.
 
 ## [0.12.1] - 2026-07-29
 
-### Fixed
-- **`status.sh` upstream provider checks: probe through SmartDNS instead of direct dig**.
-  Previous approach tested providers via `dig @IP` on default route — produced false negatives
-  when providers are reached through tunnel interfaces (`OTHER_DNS_INTERFACES`, `ZONE_DNS_INTERFACE`).
-  Now derives provider health from DNS test results (resolution through SmartDNS port),
-  which tests the actual path SmartDNS uses regardless of tunnels or direct routing.
-  Eliminates flickering on 4G/LTE setups and removes ~7 dig fork calls from status poll.
+### Исправлено
+- **Проверки upstream-провайдеров в `status.sh`: проба через SmartDNS, а не прямой dig**.
+  Раньше провайдеры проверялись через `dig @IP` по маршруту по умолчанию — это давало ложные отказы,
+  когда провайдеры доступны через туннельные интерфейсы (`OTHER_DNS_INTERFACES`, `ZONE_DNS_INTERFACE`).
+  Теперь состояние провайдера выводится из результатов DNS-теста (разрешение через порт SmartDNS),
+  то есть проверяется тот путь, которым реально пользуется SmartDNS, независимо от туннелей или прямой маршрутизации.
+  Убирает мигание на схемах 4G/LTE и убирает ~7 вызовов dig из опроса статуса.
 
 ## [0.12.0] - 2026-07-29
 
-### Added
-- **`dns-check.sh` DNS source indicator**: new JSON fields `dns_source` (`"system"` or
-  `"smartdns"`) and `dns_port` — consumers can distinguish system resolver fallback
-  from SmartDNS zone routing. Text output shows `⚠ SmartDNS not running` warning.
+### Добавлено
+- **Индикатор источника DNS в `dns-check.sh`**: новые поля JSON `dns_source` (`"system"` или
+  `"smartdns"`) и `dns_port` — потребители отличают запасной системный резолвер
+  от зональной маршрутизации SmartDNS. В текстовом выводе предупреждение `⚠ SmartDNS not running`.
 
 ## [0.11.5] - 2026-07-29
 
-### Fixed
-- **`dns-check.sh` works when SmartDNS is disabled**: checks `/proc/net/tcp` before
-  using `SMARTDNS_PORT` — falls back to system resolver `:53` when SmartDNS is stopped.
-  `SMARTDNS_PORT=0` or empty → full auto-detect via `detect_dns_port(main)`.
-- **`status.sh` works with `SMARTDNS_PORT=0`**: auto-detects actual listening port
-  via `detect_dns_port(main)` → fallback `6053` when SmartDNS not running (disabled mode
-  already skips DNS tests).
-- **`status.sh` DNS tests false-positive on connection refused**: Entware `dig +short`
-  outputs `";; communications error..."` to stdout (not stderr); `2>/dev/null` didn't
-  catch it. Added `grep -v '^;;'` filter + `is_ipv4` validation for the result.
-  Applies to both text (`dns_test()`) and JSON (`collect_dns_tests_json()`) output paths.
-- **`status.sh` DNS tests skip when process not running**: `show_dns_tests()` and
-  `collect_dns_tests_json()` now early-exit when `_st_running=false` instead of
-  sending 6 doomed `dig` queries (~12s timeout waste) with misleading results.
+### Исправлено
+- **`dns-check.sh` работает, когда SmartDNS отключён**: перед использованием `SMARTDNS_PORT` проверяет `/proc/net/tcp`
+  — переходит на системный резолвер `:53`, если SmartDNS остановлен.
+  `SMARTDNS_PORT=0` или пустое значение → полное автоопределение через `detect_dns_port(main)`.
+- **`status.sh` работает с `SMARTDNS_PORT=0`**: сам определяет фактический слушающий порт
+  через `detect_dns_port(main)` → запасной `6053`, если SmartDNS не запущен (в отключённом режиме
+  DNS-тесты и так пропускаются).
+- **Ложный успех DNS-тестов `status.sh` при отказе соединения**: Entware `dig +short`
+  пишет `";; communications error..."` в stdout (не в stderr); `2>/dev/null` это
+  не отсекал. Добавлены фильтр `grep -v '^;;'` и проверка результата через `is_ipv4`.
+  Касается и текста (`dns_test()`), и JSON (`collect_dns_tests_json()`).
+- **DNS-тесты `status.sh` пропускаются, если процесс не запущен**: `show_dns_tests()` и
+  `collect_dns_tests_json()` теперь сразу выходят при `_st_running=false`, вместо
+  6 заведомо неудачных запросов `dig` (потеря ~12 с на таймаутах) с вводящим в заблуждение результатом.
 
-### Added
-- **`SMARTDNS_PORT=0` = auto-detect**: new sentinel value — `0` or empty in `config.conf`
-  triggers `/proc/net/tcp` auto-detection. WebUI field updated with `0 = auto-detect` hint.
-  Default changed from `SMARTDNS_PORT=6053` to `SMARTDNS_PORT=0` (auto-detect).
+### Добавлено
+- **`SMARTDNS_PORT=0` = автоопределение**: новое сигнальное значение — `0` или пусто в `config.conf`
+  включает автоопределение через `/proc/net/tcp`. В поле WebUI подсказка `0 = auto-detect`.
+  Значение по умолчанию изменено с `SMARTDNS_PORT=6053` на `SMARTDNS_PORT=0` (автоопределение).
 
-### Changed
-- **`status.sh`**: sources `lib/ip.sh` (adds `detect_dns_port()` for auto-detect).
+### Изменено
+- **`status.sh`**: подключает `lib/ip.sh` (добавляет `detect_dns_port()` для автоопределения).
 
-- **`dns-check.sh`: `"verified"` field** — direct UDP probe to first upstream of
-  the expected DNS group (e.g. Yandex `77.88.8.8` for zone-group, Google `8.8.8.8`
-  for other); compares with SmartDNS answer. `true` = routing confirmed; `false` =
-  mismatch detected; `null` = probe unavailable. Text output: `Verified: ✓/✗`.
-  JSON: top-level `"verified"` boolean/null field.
-- **`get_probe_ip()`** helper in `dns-check.sh` — returns first non-system upstream
-  IP for a DNS group (skips `system` provider; used for probe verification).
+- **Поле `"verified"` в `dns-check.sh`** — прямая проба UDP к первому upstream
+  ожидаемой группы DNS (например, Yandex `77.88.8.8` для zone-group, Google `8.8.8.8`
+  для other); ответ сравнивается с ответом SmartDNS. `true` = маршрутизация подтверждена; `false` =
+  обнаружено расхождение; `null` = проба недоступна. Текстовый вывод: `Verified: ✓/✗`.
+  JSON: поле верхнего уровня `"verified"` (boolean или null).
+- **Вспомогательная функция `get_probe_ip()`** в `dns-check.sh` — возвращает первый несистемный upstream
+  IP группы DNS (пропускает провайдера `system`; используется для проверки пробой).
 
-### Changed
-- **`lib/ip.sh`: `detect_dns_port()` rewritten** — replaces slow `dig`-based probing
-  (3×1s worst-case timeout) with instant `/proc/net/tcp` check. New optional arg
-  `"main"` skips port 6153 (used by `dns-check.sh` which queries SmartDNS main port).
+### Изменено
+- **`lib/ip.sh`: `detect_dns_port()` переписан** — медленное зондирование через `dig`
+  (худший случай 3×1 с) заменено мгновенной проверкой `/proc/net/tcp`. Новый необязательный аргумент
+  `"main"` пропускает порт 6153 (его использует `dns-check.sh`, который спрашивает основной порт SmartDNS).
 
-### Documentation
-- `docs/user-manual.ru.md`: corrected `disable` semantics — it is a **full shutdown**
-  (SmartDNS + smartdns-redirect stop, DNS reverts to Keenetic system), not a "default
-  forwarder" mode. The "default" mode row removed from the modes table.
-- `README.md`: same fix — `disable` comment updated to "full shutdown — DNS reverts to
-  Keenetic system/ndnproxy".
-- `docs/dns-landscape-research.md` moved to `docs/archive/` — contains outdated/harmful
-  recommendations (`force-qtype-SOA 65` removed in v0.11.3; `restart-on-crash yes` known
-  broken as BUG-6). Historical reference only.
+### Документация
+- `docs/user-manual.ru.md`: уточнена семантика `disable` — это **полное отключение**
+  (останавливаются SmartDNS и smartdns-redirect, DNS возвращается к системе Keenetic), а не режим «форвардера
+  по умолчанию». Строка режима «default» убрана из таблицы режимов.
+- `README.md`: то же исправление — комментарий `disable` обновлён на «полное отключение — DNS возвращается к
+  системе Keenetic / ndnproxy».
+- `docs/dns-landscape-research.md` перенесён в `docs/archive/` — там устаревшие и вредные
+  рекомендации (`force-qtype-SOA 65` удалён в v0.11.3; `restart-on-crash yes` известен
+  как сломанный, BUG-6). Только историческая справка.
 
 ## [0.11.3] — 2026-07-28
 
-### Fixed
-- **ECH (Encrypted Client Hello) support**: removed `force-qtype-SOA 65` directive
-  that blocked HTTPS/SVCB DNS records (type 65). Browsers can now receive ECH
-  parameters from upstream DNS servers (Cloudflare, Google) and encrypt SNI in
-  TLS ClientHello. No impact on geo-split (uses A-records only).
+### Исправлено
+- **Поддержка ECH (Encrypted Client Hello)**: удалена директива `force-qtype-SOA 65`,
+  которая блокировала DNS-записи HTTPS/SVCB (тип 65). Браузеры снова могут получать параметры ECH
+  от upstream DNS (Cloudflare, Google) и шифровать SNI в
+  TLS ClientHello. На geo-split не влияет (используются только A-записи).
 
-### Removed
-- `config/smartdns-default.conf` — dead code; `disable` action fully stops the
-  SmartDNS daemon (`S38.disabled`) and never activated this config. Also removed
-  `CONF_DEFAULT` variable from `config/defaults.conf` and deploy block from
+### Удалено
+- `config/smartdns-default.conf` — мёртвый код; действие `disable` полностью останавливает
+  демон SmartDNS (`S38.disabled`) и никогда не активировало этот конфиг. Также удалены
+  переменная `CONF_DEFAULT` из `config/defaults.conf` и блок развёртывания из
   `packaging/postinst`.
 
 ## [0.11.2] — 2026-07-28
 
-### Changed
-- `scripts/status.sh`: deduplicate `show_ports()` — delegate to `status_show_port()`
-  from `lib/status.sh` instead of inline loop (no functional change)
-- `config/defaults.conf`: expanded PIDFILE comment (upstream daemon path clarification)
+### Изменено
+- `scripts/status.sh`: `show_ports()` без дублирования — делегирует в `status_show_port()`
+  из `lib/status.sh` вместо встроенного цикла (поведение не изменилось)
+- `config/defaults.conf`: расширен комментарий PIDFILE (уточнён путь демона upstream)
 
 ## [0.11.1] — 2026-07-27
 
-### Fixed
-- **`status.sh --json` disabled state**: runtime values (uptime, pid, memory, ports)
-  now reset to empty/zero when service is disabled — prevents phantom uptime from
-  stale pidfile
-- **`status.sh --json` dns_tests when disabled**: skip DNS dig tests when service is
-  disabled — prevents raw dig error strings (`;; communications error...`) in JSON
-- **`status.sh --json` checks when disabled**: runtime checks (`process`, `ports`)
-  now return `"skip"` instead of `"fail"` when disabled — prevents false caution
-  state in webui
-- **`status.sh --json` disabled marker**: added `disabled: true` detail field when
-  service is fully disabled
+### Исправлено
+- **Отключённое состояние в `status.sh --json`**: значения во время работы (uptime, pid, память, порты)
+  теперь сбрасываются в пустые/ноль, когда служба отключена — нет фантомного uptime из
+  устаревшего pidfile
+- **`dns_tests` в `status.sh --json` при отключении**: DNS-тесты dig пропускаются, когда служба
+  отключена — в JSON больше не попадают сырые строки ошибок dig (`;; communications error...`)
+- **Проверки `status.sh --json` при отключении**: проверки во время работы (`process`, `ports`)
+  теперь возвращают `"skip"` вместо `"fail"`, когда служба отключена — нет ложного состояния осторожности
+  в webui
+- **Маркер отключения в `status.sh --json`**: добавлено поле подробностей `disabled: true`, когда
+  служба полностью отключена
 
 ## [0.11.0] — 2026-07-27
 
-### Added
-- **Disable = full shutdown**: `S37smartdns-conf disable` now fully stops SmartDNS
-  (renames S38 init script) and stops smartdns-redirect. DNS reverts to system
-  (ndnproxy). `enable` restores everything.
+### Добавлено
+- **Disable = полное отключение**: `S37smartdns-conf disable` теперь полностью останавливает SmartDNS
+  (переименовывает init-скрипт S38) и останавливает smartdns-redirect. DNS возвращается к системе
+  (ndnproxy). `enable` восстанавливает всё.
 - `S37smartdns-conf`: `do_restore_s38()`, `do_disable_s38()`, `do_stop_redirect()`,
-  `do_start_redirect()` — service lifecycle helpers
+  `do_start_redirect()` — вспомогательные функции жизненного цикла службы
 
-### Fixed
-- **Zone UDP fallback missing `-interface`**: when `ZONE_DNS_INTERFACE` is set,
-  UDP fallback servers now also get `-interface` binding. Previously plain UDP
-  went through ISP directly — potential privacy leak.
+### Исправлено
+- **У запасного UDP зоны не было `-interface`**: если задан `ZONE_DNS_INTERFACE`,
+  серверы запасного UDP тоже получают привязку `-interface`. Раньше открытый UDP
+  шёл напрямую через ISP — возможная утечка приватности.
 
-### Changed
-- `S37smartdns-conf start`: when disabled, renames S38 to prevent boot auto-start
-  (S37 runs before S38 in rc.unslung boot sequence)
-- `S37smartdns-conf disable`: no longer switches to "default forwarder" mode —
-  performs full shutdown instead
-- `do_activate()`: simplified — always copies split config (default mode removed)
+### Изменено
+- `S37smartdns-conf start`: при отключении переименовывает S38, чтобы не было автозапуска при загрузке
+  (S37 идёт раньше S38 в последовательности загрузки rc.unslung)
+- `S37smartdns-conf disable`: больше не переключается в режим «форвардера по умолчанию» —
+  выполняется полное отключение
+- `do_activate()`: упрощён — всегда копирует split-конфиг (режим по умолчанию убран)
 
 ## [0.10.14] — 2026-07-27
 
-### Fixed
-- `S37smartdns-conf`: `do_bind_addrs()` — IPv6 bind order: LAN address first,
-  loopback last (mirrors IPv4 order for consistent port listing in status)
+### Исправлено
+- `S37smartdns-conf`: `do_bind_addrs()` — порядок bind IPv6: сначала адрес LAN,
+  loopback последним (как у IPv4, чтобы список портов в статусе был согласован)
 
 ## [0.10.13] — 2026-07-27
 
-### Added
-- `S37smartdns-conf`: `do_bind_addrs()` — regenerates `bind-addrs.conf` (IPv4 +
-  IPv6) on every start/restart/enable/disable. Auto-detects global IPv6 on br0
-  and adds IPv6 bind directives for SmartDNS — enables `smartdns-redirect`
-  IPv6 DNAT mode
+### Добавлено
+- `S37smartdns-conf`: `do_bind_addrs()` — заново создаёт `bind-addrs.conf` (IPv4 и
+  IPv6) при каждом start/restart/enable/disable. Сам находит глобальный IPv6 на br0
+  и добавляет директивы bind IPv6 для SmartDNS — включает режим
+  IPv6 DNAT у `smartdns-redirect`
 
-### Changed
-- `postinst`: removed inline `bind-addrs.conf` generation — now handled by
-  S37 `do_bind_addrs()` on restart (called from postinst step 6)
+### Изменено
+- `postinst`: встроенное создание `bind-addrs.conf` убрано — теперь это делает
+  `do_bind_addrs()` в S37 при перезапуске (вызывается из шага 6 postinst)
 
 ## [0.10.12] — 2026-07-21
 
-### Fixed
-- **opkg install conflict with upstream smartdns**: removed `/opt/etc/smartdns/smartdns.conf`,
-  `smartdns-split-dns.conf`, `smartdns-default.conf` from `data.tar.gz` — these files are
-  already deployed by `postinst` + S37 init script. Fixes `check_data_file_clashes` error
-  on clean installs where upstream `smartdns` conffiles claims `/opt/etc/smartdns/smartdns.conf`.
-  (reported by nikolay1980)
+### Исправлено
+- **Конфликт `opkg install` с upstream smartdns**: из `data.tar.gz` убраны `/opt/etc/smartdns/smartdns.conf`,
+  `smartdns-split-dns.conf`, `smartdns-default.conf` — эти файлы и так
+  раскладывают `postinst` и init-скрипт S37. Исправляет ошибку `check_data_file_clashes`
+  на чистой установке, где conffiles upstream `smartdns` претендуют на `/opt/etc/smartdns/smartdns.conf`.
+  (сообщил nikolay1980)
 
 ## [0.10.11] — 2026-07-12
 
-### Changed
-- Status: `zone_dns_provider` → `zone_dns_providers`, `other_dns_provider` → `other_dns_providers`
+### Изменено
+- Статус: `zone_dns_provider` → `zone_dns_providers`, `other_dns_provider` → `other_dns_providers`
 
-### Added
-- Init `flush-cache`: stop SmartDNS, delete persistent cache, restart
+### Добавлено
+- Init `flush-cache`: остановить SmartDNS, удалить постоянный кэш, запустить снова
 
 ## [0.10.10] — 2026-07-12
 
-### Changed
-- `status.sh`: `custom_providers` field hidden in JSON when 0 — avoids false-red
-  display in WebUI (0 custom providers is normal, not an error)
+### Изменено
+- `status.sh`: поле `custom_providers` скрыто в JSON, когда оно равно 0 — нет ложного красного
+  отображения в WebUI (0 своих провайдеров — норма, а не ошибка)
 
 ## [0.10.9] — 2026-07-12
 
-### Added
-- `status.sh`: custom DNS providers count — `Config` line now shows
-  `(N servers, M rules, K custom)` when `dns-providers-custom.conf` exists.
-  JSON: `custom_providers` numeric field.
+### Добавлено
+- `status.sh`: число своих DNS-провайдеров — строка `Config` теперь показывает
+  `(N servers, M rules, K custom)`, если есть `dns-providers-custom.conf`.
+  JSON: числовое поле `custom_providers`.
 
 ## [0.10.8] — 2026-07-11
 
-### Fixed
-- **DoH `-host-ip` now optional**: custom DoH providers (Private AdGuard DNS,
-  NextDNS, etc.) can omit `IP1`/`IP2` — SmartDNS will resolve hostname via
-  bootstrap/UDP instead of IP pinning. Previously, `-host-ip` was always emitted
-  in `generate-conf.sh`, which broke profile identification for personal DoH
-  services that rely on anycast/CDN hostname routing.
+### Исправлено
+- **`-host-ip` для DoH теперь необязателен**: свои провайдеры DoH (Private AdGuard DNS,
+  NextDNS и т. д.) могут не указывать `IP1`/`IP2` — SmartDNS разрешит имя хоста через
+  bootstrap/UDP, без привязки к IP. Раньше `-host-ip` всегда выводился
+  в `generate-conf.sh`, из-за чего ломалось определение профиля личных служб DoH,
+  которые опираются на маршрутизацию имени хоста anycast/CDN.
 
-### Changed
-- `_emit_doh_server()` / `_emit_zone_doh()` in `generate-conf.sh`: switched from
-  heredoc to printf-based output for conditional `-host-ip` support
-- postinst template: added Private DoH (AdGuard/NextDNS) example with empty IP
-- Documentation: updated DoH examples in user-manual.ru.md and README.md
+### Изменено
+- `_emit_doh_server()` / `_emit_zone_doh()` в `generate-conf.sh`: с heredoc на вывод через printf,
+  чтобы `-host-ip` был условным
+- Шаблон postinst: добавлен пример Private DoH (AdGuard/NextDNS) с пустым IP
+- Документация: обновлены примеры DoH в user-manual.ru.md и README.md
 
 ## [0.10.7] — 2026-07-02
 
-### Added
-- `dns-check.sh --json`: new `"groups"` array in JSON output — always lists
-  BOTH DNS groups ("zone" and "other"/default) with their configured
-  providers/servers/interface and a `matched` flag, regardless of which
-  group actually resolved the queried domain. Enables the WebUI DNS Check
-  diagram to always show all configured DNS paths (mirrors geo-split
-  route-check's `all_paths` behavior). Legacy `zone`/`upstream` fields
-  (matched-group-only) are unchanged for backward compatibility. Text
-  (non-`--json`) CLI output is unchanged — stays concise, matched group only.
+### Добавлено
+- `dns-check.sh --json`: новый массив `"groups"` в выводе JSON — всегда перечисляет
+  ОБЕ группы DNS («zone» и «other»/default) с их настроенными
+  провайдерами, серверами, интерфейсом и флагом `matched`, независимо от того, какая
+  группа фактически разрешила запрошенный домен. Схема проверки DNS в WebUI
+  всегда показывает все настроенные пути DNS (как `all_paths` у route-check в geo-split).
+  Прежние поля `zone`/`upstream` (только совпавшая группа) не изменены ради совместимости. Текстовый
+  вывод CLI (без `--json`) не изменился — по-прежнему краткий, только совпавшая группа.
 
 ## [0.10.6] — 2026-06-29
 
-### Added
-- `dns-check.sh`: diagnostic tool — shows DNS zone, upstream, resolved IPs for WebUI
+### Добавлено
+- `dns-check.sh`: средство диагностики — показывает DNS-зону, upstream и разрешённые IP для WebUI
 
 ## [0.10.5] — 2026-06-17
 
-### Fixed
-- **DNS probe timeout**: increased from 2s to 3s (`+time=3`) in both
-  `collect_dns_tests_json()` and `collect_dns_server_checks_json()`. Reduces
-  false-positive ✗ indicators when upstream DNS (DoT/DoH via tunnel) is momentarily
-  slow. Early-exit logic (skip after 2 fails) limits worst-case impact.
+### Исправлено
+- **Таймаут пробы DNS**: увеличен с 2 с до 3 с (`+time=3`) и в
+  `collect_dns_tests_json()`, и в `collect_dns_server_checks_json()`. Меньше
+  ложных индикаторов ✗, когда upstream DNS (DoT/DoH через туннель) ненадолго
+  замедляется. Ранний выход (пропуск после 2 неудач) ограничивает худший случай.
 
 ## [0.10.4] — 2026-06-16
 
-### Added
-- **Custom DNS providers** (`dns-providers-custom.conf`) — user-defined DNS servers
-  preserved across package upgrades. Supports UDP, DoT, DoH protocols. Template with
-  examples created on first install by postinst. Custom providers appear in WebUI
-  dropdown alongside built-in catalog.
+### Добавлено
+- **Свои DNS-провайдеры** (`dns-providers-custom.conf`) — заданные пользователем DNS-серверы
+  сохраняются при обновлении пакета. Протоколы UDP, DoT, DoH. Шаблон с
+  примерами создаёт postinst при первой установке. Свои провайдеры появляются в выпадающем списке WebUI
+  рядом со встроенным каталогом.
 
 ## [0.10.3] — 2026-06-15
 
-### Fixed
-- **CPU-safe DNS checks for degraded networks**: reduced dig timeout from 3s to
-  2s for local SmartDNS queries, added `+tries=1` everywhere. Added early-exit
-  logic: if 2+ DNS tests fail (timeout), remaining tests are skipped with
-  "SKIPPED" result instead of blocking CPU for 3s×N. Prevents cascade CPU
-  overload on routers with filtered/slow uplinks (e.g., middlebox filtering).
-- `collect_dns_server_checks_json()`: same early-exit for upstream reachability
-  checks — if 2+ upstreams timeout, skip remaining (network is clearly down).
+### Исправлено
+- **Проверки DNS, щадящие CPU на ухудшенной сети**: таймаут dig для локальных запросов SmartDNS снижен с 3 с до
+  2 с, везде добавлен `+tries=1`. Добавлен ранний выход:
+  если не проходят 2 и более DNS-тестов (таймаут), остальные пропускаются с
+  результатом «SKIPPED», а не держат CPU по 3 с × N. Нет каскадной перегрузки CPU
+  на роутерах с фильтруемым или медленным uplink (например, фильтрация middlebox).
+- `collect_dns_server_checks_json()`: тот же ранний выход для проверок доступности upstream —
+  если 2 и более upstream не отвечают по таймауту, остальные пропускаются (сеть явно недоступна).
 
 ## [0.10.2] — 2026-06-15
 
-### Changed
-- `scripts/status.sh`: refactored text output to use declarative accumulator API
-  (`status_line`, `status_section`, `status_emit_text`). Added `text_output()`
-  function parallel to `json_output()`. No visual output change.
+### Изменено
+- `scripts/status.sh`: текстовый вывод переведён на декларативный API накопителя
+  (`status_line`, `status_section`, `status_emit_text`). Добавлена функция `text_output()`
+  параллельно `json_output()`. Визуальный вывод не изменился.
 
 ## [0.10.1] — 2026-06-15
 
-### Changed
-- `scripts/status.sh`: refactored `json_output()` to use declarative
-  `status_detail`/`status_check_result`/`status_emit_json` API from lib/status.sh.
-  No change to JSON output format.
+### Изменено
+- `scripts/status.sh`: `json_output()` переведён на декларативный
+  API `status_detail`/`status_check_result`/`status_emit_json` из lib/status.sh.
+  Формат вывода JSON не изменился.
 
 ## [0.10.0] — 2026-06-15
 
-### Changed
-- `default` DNS provider renamed → `system`. More accurate: resolves from
-  Keenetic system DNS config (`/tmp/ndnproxymain.conf`), not necessarily ISP-assigned.
-  Update `config.conf` if you used `OTHER_DNS_PROVIDER="default"` or `ZONE_DNS_PROVIDER="default"`.
-- `dns-providers.conf`: added `*_LABEL` variables for each provider (used by WebUI dynamic list)
+### Изменено
+- DNS-провайдер `default` переименован → `system`. Точнее: разрешение берётся из
+  системной конфигурации DNS Keenetic (`/tmp/ndnproxymain.conf`), а не обязательно от назначенного ISP.
+  Обновите `config.conf`, если использовали `OTHER_DNS_PROVIDER="default"` или `ZONE_DNS_PROVIDER="default"`.
+- `dns-providers.conf`: для каждого провайдера добавлены переменные `*_LABEL` (их использует динамический список WebUI)
 
 ## [0.9.0] — 2026-06-15
 
-### Added
-- **`system` (Keenetic DNS) provider** — provider option for both `OTHER_DNS_PROVIDER` and
-  `ZONE_DNS_PROVIDER`. Uses plain UDP to system DNS servers (read dynamically from
-  `/tmp/ndnproxymain.conf` at config generation time). Lowest latency, no encryption overhead.
-- `_get_isp_dns_ips()` helper in `generate-conf.sh` — parses ISP nameservers from
-  `/tmp/ndnproxymain.conf` (filters out SmartDNS :6053 and loopback)
-- New protocol type `udp` in provider catalog (`dns-providers.conf`)
+### Добавлено
+- **Провайдер `system` (DNS Keenetic)** — вариант и для `OTHER_DNS_PROVIDER`, и для
+  `ZONE_DNS_PROVIDER`. Обычный UDP к системным DNS-серверам (читаются динамически из
+  `/tmp/ndnproxymain.conf` в момент генерации конфигурации). Минимальная задержка, без накладных расходов шифрования.
+- Вспомогательная функция `_get_isp_dns_ips()` в `generate-conf.sh` — разбирает nameserver ISP из
+  `/tmp/ndnproxymain.conf` (отфильтровывает SmartDNS :6053 и loopback)
+- Новый тип протокола `udp` в каталоге провайдеров (`dns-providers.conf`)
 
 ## [0.8.0] — 2026-06-09
 
-### Changed
-- **Dynamic DNS zone generation** — replaced 235 static zone files (`config/zones/*.conf`)
-  with runtime generation from `dns-providers.conf` + `zone-routing-rules.conf`
-- **Configurable DNS providers** — new `OTHER_DNS_PROVIDER` and `ZONE_DNS_PROVIDER`
-  settings in config. Supports: google, cloudflare, quad9, mullvad, controld, adguard (international);
-  yandex, adguard, alidns, tencent (regional/zone)
-- `generate-conf.sh` fully rewritten — dynamic provider lookup, zone routing from rules file
-- `status.sh` — shows Zone DNS / Other DNS providers in text and JSON output
+### Изменено
+- **Динамическая генерация DNS-зон** — 235 статических файлов зон (`config/zones/*.conf`)
+  заменены генерацией во время работы из `dns-providers.conf` и `zone-routing-rules.conf`
+- **Настраиваемые DNS-провайдеры** — новые параметры `OTHER_DNS_PROVIDER` и `ZONE_DNS_PROVIDER`
+  в конфигурации. Поддерживаются: google, cloudflare, quad9, mullvad, controld, adguard (международные);
+  yandex, adguard, alidns, tencent (региональные/зональные)
+- `generate-conf.sh` полностью переписан — динамический поиск провайдера, зональная маршрутизация из файла правил
+- `status.sh` — показывает провайдеров Zone DNS / Other DNS в тексте и JSON
 
-### Added
-- `config/dns-providers.conf` — catalog of 15 DNS providers with IPs, hostnames, protocols
-- `config/zone-routing-rules.conf` — IDN TLDs (30 countries) + extra CDN domains (80+ countries)
-- `OTHER_DNS_PROVIDER` / `ZONE_DNS_PROVIDER` config options (space-separated provider names)
-- **DNS Server Checks** — `status.sh --json` now includes `dns_server_checks` array:
-  direct reachability test for each configured upstream provider (dig @IP, TTL=15s cache)
+### Добавлено
+- `config/dns-providers.conf` — каталог из 15 DNS-провайдеров с IP, именами хостов и протоколами
+- `config/zone-routing-rules.conf` — IDN TLD (30 стран) и дополнительные домены CDN (80+ стран)
+- Параметры конфигурации `OTHER_DNS_PROVIDER` / `ZONE_DNS_PROVIDER` (имена провайдеров через пробел)
+- **Проверки DNS-серверов** — `status.sh --json` теперь включает массив `dns_server_checks`:
+  прямая проверка доступности каждого настроенного upstream-провайдера (dig @IP, кэш TTL=15 с)
 
-### Removed
-- `config/zones/` directory (235 static zone files — replaced by dynamic generation)
-- `scripts/generate-zone-presets.sh` (dev-time zone generator, no longer needed)
-- `scripts/patch-zone-labels.py` (emoji label patcher, no longer needed)
+### Удалено
+- Каталог `config/zones/` (235 статических файлов зон — заменены динамической генерацией)
+- `scripts/generate-zone-presets.sh` (генератор зон для разработки, больше не нужен)
+- `scripts/patch-zone-labels.py` (патч подписей emoji, больше не нужен)
 
 ## [0.7.1] - 2026-06-07
 
-### Changed
-- Migrated unions data from `config/unions.conf` to shared `lib/geo.sh`
-- `generate-conf.sh`: uses `resolve_geo_zone()` from lib/geo.sh
-- `status.sh`: uses `resolve_geo_zone()` from lib/geo.sh
-- Removed `config/unions.conf` (all data now in shared library)
+### Изменено
+- Данные союзов перенесены из `config/unions.conf` в общую `lib/geo.sh`
+- `generate-conf.sh`: использует `resolve_geo_zone()` из lib/geo.sh
+- `status.sh`: использует `resolve_geo_zone()` из lib/geo.sh
+- Удалён `config/unions.conf` (все данные теперь в общей библиотеке)
 
 ## [0.7.0] - 2026-06-07
 
-### Added
-- 234 zone preset configs in `config/zones/` (was 5 EAEU only)
-- Full ISO 3166-1 alpha-2 coverage: every country in any union now activates
-- China zone: AliDNS + Tencent DNSPod (mainland-optimized)
-- CIS zones: Yandex + AdGuard (regional CDN presence)
-- Default zones: Cloudflare + Google DoT (global anycast)
-- `scripts/generate-zone-presets.sh` — regenerate all zone presets
+### Добавлено
+- 234 пресета зон в `config/zones/` (было только 5 для ЕАЭС)
+- Полное покрытие ISO 3166-1 alpha-2: любая страна в любом союзе теперь активируется
+- Зона Китая: AliDNS + Tencent DNSPod (оптимизация для материкового Китая)
+- Зоны СНГ: Yandex + AdGuard (региональное присутствие CDN)
+- Зоны по умолчанию: Cloudflare + Google DoT (глобальный anycast)
+- `scripts/generate-zone-presets.sh` — пересоздать все пресеты зон
 
-### Changed
-- Unions now fully operational — no more "no zone preset" warnings
+### Изменено
+- Союзы полностью рабочие — предупреждений «no zone preset» больше нет
 
 ## [0.6.0] - 2026-06-07
 
-### Changed
-- **Package renamed**: `smartdns-conf-ru-split` → `smartdns-geo-conf`
-- Directory: `smartdns-conf-ru-split/` → `smartdns-geo-conf/`
-- Git tag prefix: `smartdns-conf-v` → `smartdns-geo-conf-v`
-- LOG_TAG updated to `smartdns-geo-conf`
+### Изменено
+- **Пакет переименован**: `smartdns-conf-ru-split` → `smartdns-geo-conf`
+- Каталог: `smartdns-conf-ru-split/` → `smartdns-geo-conf/`
+- Префикс git-тега: `smartdns-conf-v` → `smartdns-geo-conf-v`
+- LOG_TAG обновлён на `smartdns-geo-conf`
 
-### Migration
-- Users must `opkg remove smartdns-conf-ru-split` then `opkg install smartdns-geo-conf`
-- Config file path changed: `/opt/keenetic-entware-extras/smartdns-geo-conf/config/config.conf`
+### Миграция
+- Нужно выполнить `opkg remove smartdns-conf-ru-split`, затем `opkg install smartdns-geo-conf`
+- Путь файла конфигурации изменился: `/opt/keenetic-entware-extras/smartdns-geo-conf/config/config.conf`
 
 ## [0.5.1] - 2026-06-07
 
-### Changed
-- generate-conf.sh: skip "default" pseudo-value in interface lists (WebUI sends "default" for default route)
+### Изменено
+- generate-conf.sh: пропускать псевдозначение «default» в списках интерфейсов (WebUI шлёт «default» для маршрута по умолчанию)
 
 ## [0.5.0] - 2026-06-06
 
-### Added
-- **Multi-zone DNS routing** — configurable `DNS_ZONE` in `config/config.conf`:
-  single country (`ru`, `by`, `kz`, `am`, `kg`) or union (`eas`, `cis`, `brics`, etc.)
-- **Tunnel interface binding** for international DNS (`OTHER_DNS_INTERFACES`) and
-  zone DNS (`ZONE_DNS_INTERFACE`) — MITM protection
-- `config/config.conf` — user configuration file (preserved on opkg upgrade)
-- `config/unions.conf` — 35+ geo-political unions reference (EAEU, CIS, BRICS,
-  NATO, EU, Schengen, ASEAN, GCC, etc.)
-- `config/zones/{ru,by,kz,am,kg}.conf` — static per-country DNS server presets
-  with nameserver routing rules and CDN-optimized services
-- `scripts/generate-conf.sh` — generates `dns-servers-other.conf` and
-  `dns-zones-active.conf` from config.conf settings
-- `init.d/S37smartdns-conf` — init script: generates configs at start,
-  supports enable/disable/status commands
+### Добавлено
+- **Многозонная маршрутизация DNS** — настраиваемый `DNS_ZONE` в `config/config.conf`:
+  одна страна (`ru`, `by`, `kz`, `am`, `kg`) или союз (`eas`, `cis`, `brics` и т. д.)
+- **Привязка к туннельному интерфейсу** для международного DNS (`OTHER_DNS_INTERFACES`) и
+  зонального DNS (`ZONE_DNS_INTERFACE`) — защита от MITM
+- `config/config.conf` — файл конфигурации пользователя (сохраняется при `opkg upgrade`)
+- `config/unions.conf` — справочник 35+ геополитических союзов (ЕАЭС, СНГ, БРИКС,
+  NATO, EU, Шенген, ASEAN, GCC и т. д.)
+- `config/zones/{ru,by,kz,am,kg}.conf` — статические пресеты DNS-серверов по странам
+  с правилами маршрутизации nameserver и службами, оптимизированными под CDN
+- `scripts/generate-conf.sh` — создаёт `dns-servers-other.conf` и
+  `dns-zones-active.conf` из настроек config.conf
+- `init.d/S37smartdns-conf` — init-скрипт: генерирует конфиги при старте,
+  поддерживает команды enable/disable/status
 
-### Changed
-- `smartdns.conf` — hardcoded DNS servers and zones replaced with
-  `conf-file` includes (generated dynamically)
-- `smartdns-default.conf` — uses generated `dns-servers-other.conf`
-- `toggle.sh` — deprecated; thin wrapper over S37smartdns-conf
-- `postinst` — installs S37 init script, calls generate-conf.sh
+### Изменено
+- `smartdns.conf` — жёстко заданные DNS-серверы и зоны заменены
+  включениями `conf-file` (создаются динамически)
+- `smartdns-default.conf` — использует созданный `dns-servers-other.conf`
+- `toggle.sh` — устарел; тонкая обёртка над S37smartdns-conf
+- `postinst` — ставит init-скрипт S37, вызывает generate-conf.sh
 
-### Packaging
-- Version bump: 0.4.4 → 0.5.0
-- Added `conffiles`: config.conf preserved on upgrade
-- Updated `prerm`/`postrm`: cleanup S37 + generated config snippets
+### Упаковка
+- Поднятие версии: 0.4.4 → 0.5.0
+- Добавлены `conffiles`: config.conf сохраняется при обновлении
+- Обновлены `prerm`/`postrm`: очистка S37 и созданных фрагментов конфигурации
 
 ## [0.4.4] - 2026-06-01
 
-### Changed
-- `status.sh`: status word (`✓ Alive` / `✗ Fail`) printed on title line
+### Изменено
+- `status.sh`: слово статуса (`✓ Alive` / `✗ Fail`) печатается в строке заголовка
 
-### Fixed
-- `smartdns.conf` — misleading comment about leading dot in nameserver rules;
-  clarified that `/.ru/ru` and `/ru/ru` are equivalent (suffix match)
+### Исправлено
+- `smartdns.conf` — вводящий в заблуждение комментарий о ведущей точке в правилах nameserver;
+  уточнено, что `/.ru/ru` и `/ru/ru` равнозначны (совпадение по суффиксу)
 
 ## [0.4.3] - 2026-05-16
 
-### Added
-- TCP listeners (`bind-tcp`) on ports 6053 and 6153 — fixes TCP DNS timeout
-  when `smartdns-redirect` forwards TCP traffic to SmartDNS
+### Добавлено
+- Слушатели TCP (`bind-tcp`) на портах 6053 и 6153 — исправляет таймаут TCP DNS,
+  когда `smartdns-redirect` пересылает TCP-трафик в SmartDNS
 
 ## [0.4.2] - 2026-05-12
 
-### Fixed
-- Toggle script state persistence across reboots
+### Исправлено
+- Сохранение состояния скрипта переключения между перезагрузками
 
-### Changed
-- Default DNS config uses DoH for international resolvers
+### Изменено
+- В конфигурации DNS по умолчанию для международных резолверов используется DoH

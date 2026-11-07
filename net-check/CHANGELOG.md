@@ -1,385 +1,383 @@
-1# Changelog
+# Журнал изменений
 
-All notable changes to `net-check` are documented here.
+Все заметные изменения `net-check` описаны здесь.
 
-Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/)
-Versioning: [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html)
+Формат: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/)
+Версионирование: [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html)
 
 ## [0.2.15] - 2026-11-01
 
-### Fixed
-- `lib/batch.sh`: `_auto_batch_size()` — formula-based memory cap to prevent OOM on low-RAM devices (e.g. KN-2310, 124MB). `mem_cap = floor(MemAvailable_MB / 15)` — each batch slot ~15MB for curl+TLS per interface. Caps batch when RAM is tight, boosts +1 when headroom exists. Replaces percentage-only check that ignored absolute memory
+### Исправлено
+- `lib/batch.sh`: `_auto_batch_size()` — потолок памяти по формуле, чтобы не получить OOM на устройствах с малым объёмом RAM (например, KN-2310, 124 МБ). `mem_cap = floor(MemAvailable_MB / 15)` — каждый слот пакета ~15 МБ на curl+TLS на интерфейс. Ужимает пакет, когда RAM впритык, и даёт +1, когда есть запас. Вместо проверки только в процентах, которая не смотрела на абсолютный объём памяти
 
 ## [0.2.14] - 2026-08-30
 
-### Fixed
-- Add `traceroute` to Recommends — used by connectivity check for hop count display
+### Исправлено
+- `traceroute` добавлен в Recommends — проверка связности показывает через него число хопов
 
 ## [0.2.13] - 2026-08-28
 
-### Changed
-- Docs: installation instructions updated for opkg feed — `opkg install net-check` instead of `.ipk` filenames, opkg repo setup steps in user manual
+### Изменено
+- Документация: инструкции по установке обновлены под фид opkg — `opkg install net-check` вместо имён файлов `.ipk`, шаги настройки репозитория opkg в руководстве пользователя
 
 ## [0.2.12] - 2026-08-22
 
-### Changed
-- `lib/privacy.sh`: refactored to use shared `lib/privacy.sh` — `_priv_mask_patterns()` (53 lines) removed, replaced by `priv_mask_ip_asn()` + `priv_mask_ipv6()` from shared library. Net-check-specific City/Org/CC replacements remain local
+### Изменено
+- `lib/privacy.sh`: переход на общий `lib/privacy.sh` — `_priv_mask_patterns()` (53 строки) удалён, вместо него `priv_mask_ip_asn()` и `priv_mask_ipv6()` из общей библиотеки. Подмены City/Org/CC, нужные только net-check, остались локальными
 
 ## [0.2.11] - 2026-08-16
 
-### Changed
-- Legal terminology compliance: tunnel → tunnel in user manual, config comments, script comments (zone.sh, cmd-dns-leak.sh, cmd-ipv6-leak.sh, defaults.conf, cdn-domains.conf, privacy-providers.conf)
-- User manual: «Обнаружение блокировок» → «Обнаружение сетевых аномалий», «мимо tunnel» → «мимо шифрованного канала»
+### Изменено
+- Соответствие юридической терминологии: tunnel → tunnel в руководстве пользователя, комментариях конфигурации и скриптов (zone.sh, cmd-dns-leak.sh, cmd-ipv6-leak.sh, defaults.conf, cdn-domains.conf, privacy-providers.conf)
+- Руководство пользователя: «Обнаружение блокировок» → «Обнаружение сетевых аномалий», «мимо tunnel» → «мимо шифрованного канала»
 
 ## [0.2.10] - 2026-08-16
 
-### Added
-- `docs/user-manual.ru.md` — full Russian user manual (usage, all commands, flags, configuration, config files, troubleshooting)
-- README: user manual link, `iputils-ping` in dependencies, file structure tree, `domain-check.sh` section
+### Добавлено
+- `docs/user-manual.ru.md` — полное руководство пользователя на русском (использование, все команды, флаги, конфигурация, файлы конфигурации, устранение неполадок)
+- README: ссылка на руководство, `iputils-ping` в зависимостях, дерево файлов, раздел `domain-check.sh`
 
 ## [0.2.9] - 2026-08-11
 
-### Changed
-- Rename `cmd-targets.sh` → `cmd-compare.sh` — align with `cmd-{command}.sh`
-  naming convention (`comp` command dispatches to `cmd_compare()`).
+### Изменено
+- Переименование `cmd-targets.sh` → `cmd-compare.sh` — в ряд с соглашением `cmd-{command}.sh`
+  (команда `comp` вызывает `cmd_compare()`).
 
 ## [0.2.8] - 2026-08-11
 
-### Changed
-- **Refactor: decompose `cmd_dns_leak()` (239→33 lines)** — split monolithic
-  function into 5-phase pipeline: `_dns_leak_setup_context` (SmartDNS detect +
-  tunnel CC sets), `_dns_leak_classify_resolvers` (resolver classification loop),
-  `_dns_leak_render_text` (table + verdict), `_dns_leak_render_json` (JSON output),
-  `cmd_dns_leak` (orchestrator). No behavior changes.
+### Изменено
+- **Рефакторинг: разбор `cmd_dns_leak()` (239→33 строки)** — монолитная
+  функция разбита на конвейер из 5 фаз: `_dns_leak_setup_context` (обнаружение SmartDNS и
+  наборы CC туннеля), `_dns_leak_classify_resolvers` (цикл классификации резолверов),
+  `_dns_leak_render_text` (таблица и вердикт), `_dns_leak_render_json` (вывод JSON),
+  `cmd_dns_leak` (оркестратор). Поведение не изменилось.
 
-### Fixed
-- **`all` mode: empty comp/cdn/tls sections** — `set -e` was active in pipe
-  subshells (`{ cmd; echo $? > file; } | _out_section`), causing early subshell
-  termination when any command returned non-zero (e.g. `active_dev_for_target`
-  on empty DNS resolve). Standalone mode was unaffected (`|| true` suppresses
-  `set -e`). Fix: `set +e` in pipe subshell + `if` guard in `active_dev_for_target`.
+### Исправлено
+- **Режим `all`: пустые секции comp/cdn/tls** — `set -e` действовал в подоболочках
+  конвейера (`{ cmd; echo $? > file; } | _out_section`), и подоболочка обрывалась,
+  если любая команда возвращала не ноль (например, `active_dev_for_target`
+  при пустом ответе DNS). Отдельный запуск не страдал (`|| true` гасит
+  `set -e`). Исправление: `set +e` в подоболочке конвейера и проверка `if` в `active_dev_for_target`.
 
-### Changed
-- **Refactor: command internal decomposition (Batch 5)** — decomposed 5 largest
-  cmd-functions into internal helpers following setup → collect → render pattern:
-  - `cmd-targets.sh`: `cmd_compare()` 357→83 lines, `cmd_check_target()` 134→55 lines
-    (8 new helpers: `_compare_load_targets`, `_compare_prescan_host`, `_compare_classify_path`,
+### Изменено
+- **Рефакторинг: внутренняя декомпозиция команд (Batch 5)** — 5 самых крупных
+  функций команд разобраны на внутренние вспомогательные по схеме подготовка → сбор → отрисовка:
+  - `cmd-targets.sh`: `cmd_compare()` 357→83 строки, `cmd_check_target()` 134→55 строк
+    (8 новых функций: `_compare_load_targets`, `_compare_prescan_host`, `_compare_classify_path`,
      `_compare_collect_path`, `_compare_render_cell`, `_compare_host_verdict`, `_compare_render_summary`,
      `_check_target_probe_iface`, `_check_target_verdict`)
-  - `cmd-dns.sh`: `cmd_dns()` 308→60 lines, `_dns_check_single()` 175→35 lines
-    (9 new helpers: `_dns_detect_resolver`, `_dns_detect_isp`, `_dns_load_domains`,
+  - `cmd-dns.sh`: `cmd_dns()` 308→60 строк, `_dns_check_single()` 175→35 строк
+    (9 новых функций: `_dns_detect_resolver`, `_dns_detect_isp`, `_dns_load_domains`,
      `_dns_run_batch`, `_dns_classify_domain`, `_dns_process_domain`, `_dns_render_summary`,
      `_dns_single_classify`, `_dns_single_render_json`, `_dns_single_render_text`)
-  - `cmd-tls.sh`: `cmd_tls_check()` 190→37 lines, `cmd_tls_check_targets()` 299→79 lines
-    (7 new helpers: `_tls_classify_status`, `_tls_check_probe_iface`, `_tls_check_summary`,
+  - `cmd-tls.sh`: `cmd_tls_check()` 190→37 строк, `cmd_tls_check_targets()` 299→79 строк
+    (7 новых функций: `_tls_classify_status`, `_tls_check_probe_iface`, `_tls_check_summary`,
      `_tls_targets_load`, `_tls_targets_run_batch`, `_tls_targets_prescan_host`,
      `_tls_targets_process_path`, `_tls_targets_host_verdict`, `_tls_targets_render_summary`)
-  - `cmd-cdn.sh`: `cmd_cdn()` 188→55 lines, `cmd_cdn_all()` 291→87 lines
-    (7 new helpers: `_cdn_resolve_local`, `_cdn_collect_render_iface`, `_cdn_render_verdict`,
+  - `cmd-cdn.sh`: `cmd_cdn()` 188→55 строк, `cmd_cdn_all()` 291→87 строк
+    (7 новых функций: `_cdn_resolve_local`, `_cdn_collect_render_iface`, `_cdn_render_verdict`,
      `_cdn_all_load_domains`, `_cdn_all_run_batch`, `_cdn_all_prescan_host`,
      `_cdn_all_process_path`, `_cdn_all_host_verdict`, `_cdn_all_render_summary`)
-  - `cmd-connectivity.sh`: `cmd_connectivity()` 265→64 lines
-    (6 new helpers: `_conn_phase1_curl`, `_conn_phase2_probes`, `_conn_merge_results`,
+  - `cmd-connectivity.sh`: `cmd_connectivity()` 265→64 строки
+    (6 новых функций: `_conn_phase1_curl`, `_conn_phase2_probes`, `_conn_merge_results`,
      `_conn_classify_iface`, `_conn_render_iface`)
-  - All helpers use `_` prefix, stay in same file (no new files created)
-  - Pure structural refactoring — zero behavior changes
-- **Adaptive batch sizing: memory-aware** — `_auto_batch_size()` now checks
-  `/proc/meminfo` (MemAvailable with MemFree fallback): when free memory > 10%,
-  batch size gets +1 boost (I/O-bound curl tasks benefit from extra parallelism
-  when RAM permits). CPU pressure thresholds unchanged.
-- **Refactor: split http-core.sh + extract batch.sh (Batch 3+4)** — extracted
-  2 new focused modules:
-  - `verdict.sh` (288 lines) — failure classification, reason labels, overall verdict
-  - `batch.sh` (87 lines) — adaptive batch sizing, parallel batch runner
-  - `http-core.sh` reduced (467→191 lines) — content verification, curl wrapper, metrics only
-  - `output.sh` reduced (168→124 lines) — batch runner extracted
-  - `net-check.sh` reduced (239→201 lines) — batch sizing extracted
-  - Pure structural refactoring — zero logic changes
-- **Refactor: decompose wan.sh multi-concern module (Batch 2)** — split
-  `wan.sh` (487→95 lines) into focused modules:
-  - `zone.sh` (358 lines) — geo-zone context, routing/FIB lookup, zone header UI
-  - `geo-cache.sh` enhanced (63→116 lines) — unified geo cache ops + lookups
-  - `wan.sh` reduced — WAN discovery + `iface_type()` only
-  - Source order: wan.sh → geo-cache.sh → zone.sh (dependency-ordered)
-  - Pure structural refactoring — zero logic changes
-- **Refactor: decompose output.sh god-module (Batch 1)** — extracted 3 new
-  focused library modules from `output.sh` (625→166 lines):
-  - `colors.sh` (76 lines) — terminal colors, status marks, emoji handling
-  - `table.sh` (223 lines) — simple + comparison table rendering framework
-  - `sections.sh` (185 lines) — spinner, banners, verbosity, exit code mgmt
-  - Replaced wildcard `lib/*.sh` source with explicit dependency-ordered loading
-  - Pure structural refactoring — zero logic changes
+  - У всех вспомогательных функций префикс `_`, они остаются в том же файле (новых файлов нет)
+  - Чисто структурный рефакторинг — поведение не изменилось
+- **Адаптивный размер пакета с учётом памяти** — `_auto_batch_size()` теперь смотрит
+  `/proc/meminfo` (MemAvailable, иначе MemFree): если свободной памяти больше 10%,
+  размер пакета получает +1 (задачам curl, упирающимся в I/O, полезен лишний параллелизм,
+  когда RAM позволяет). Пороги нагрузки на CPU не изменились.
+- **Рефакторинг: разделение http-core.sh и вынос batch.sh (Batch 3+4)** — два новых
+  узких модуля:
+  - `verdict.sh` (288 строк) — классификация сбоев, подписи причин, общий вердикт
+  - `batch.sh` (87 строк) — адаптивный размер пакета, параллельный запуск
+  - `http-core.sh` сокращён (467→191 строка) — только проверка содержимого, обёртка curl и метрики
+  - `output.sh` сокращён (168→124 строки) — запуск пакетов вынесен
+  - `net-check.sh` сокращён (239→201 строка) — расчёт размера пакета вынесен
+  - Чисто структурный рефакторинг — логика не изменилась
+- **Рефакторинг: разбор многоцелевого wan.sh (Batch 2)** — `wan.sh`
+  (487→95 строк) разбит на узкие модули:
+  - `zone.sh` (358 строк) — контекст геозоны, поиск в маршрутах и FIB, шапка зоны в интерфейсе
+  - `geo-cache.sh` расширен (63→116 строк) — общие операции и поиск в кэше geo
+  - `wan.sh` сокращён — только обнаружение WAN и `iface_type()`
+  - Порядок подключения: wan.sh → geo-cache.sh → zone.sh (по зависимостям)
+  - Чисто структурный рефакторинг — логика не изменилась
+- **Рефакторинг: разбор монолитного output.sh (Batch 1)** — из `output.sh`
+  (625→166 строк) вынесены 3 узкие библиотеки:
+  - `colors.sh` (76 строк) — цвета терминала, отметки статуса, emoji
+  - `table.sh` (223 строки) — каркас простых и сравнительных таблиц
+  - `sections.sh` (185 строк) — индикатор, баннеры, подробность вывода, коды выхода
+  - Подключение по маске `lib/*.sh` заменено явным порядком по зависимостям
+  - Чисто структурный рефакторинг — логика не изменилась
 
 ## [0.2.7] - 2026-08-10
 
-### Changed
-- **Performance: GeoIP pre-warm** — after Phase 2 parallel probes in DNS and
-  CDN commands, all resolved IPs are batch-geolocated (deduplicated, sequential)
-  before Phase 3 rendering. Phase 3 `geolocate_ip()` calls now always hit
-  fresh cache — eliminates ~160 sequential HTTP requests on cold cache
+### Изменено
+- **Производительность: прогрев GeoIP** — после параллельных зондов фазы 2 в командах DNS и
+  CDN все разрешённые IP геолоцируются пакетом (без повторов, последовательно)
+  до отрисовки фазы 3. Вызовы `geolocate_ip()` в фазе 3 всегда попадают
+  в свежий кэш — на холодном кэше уходит около 160 последовательных HTTP-запросов
 
-### Fixed
-- **Historical diff cache: quoted verdict values** — `load_prev_cache()` now
-  quotes verdict values in eval'd variable assignments, preventing shell errors
-  when verdict contains spaces (e.g. "Untrusted CA")
+### Исправлено
+- **Кэш исторического diff: вердикты в кавычках** — `load_prev_cache()` теперь
+  берёт значения вердикта в кавычки в присваиваниях для eval, чтобы оболочка не падала,
+  если в вердикте есть пробелы (например, "Untrusted CA")
 
 ## [0.2.6] - 2026-08-10
 
-### Changed
-- **Fork/exec optimization for table rendering** — reduced ~3800 fork/exec
-  calls during compare/tls/cdn/dns table output (30 targets × 4 interfaces):
-  - `parse_curl_metrics()` → single awk (18→2 forks per call)
-  - `to_ms()` → pure shell arithmetic (1→0 forks per call)
-  - JSON construction in hot loops → inline printf (6-11→0 forks per cell)
-  - `prev_verdict_for()` → pre-parsed cache lookup (4→1 fork per cell)
-  - `tbl_cell_v()` — global-variable variant of `tbl_cell()` (1→0 forks)
-  - `precache_geo_cc()` / `geo_cc_fast()` — pre-cached CC lookup (3→0 forks)
-  - `_cdn_format_cell_v()` — global-variable variant for CDN cells
+### Изменено
+- **Оптимизация fork/exec при отрисовке таблиц** — примерно на 3800 вызовов fork/exec
+  меньше при выводе таблиц compare/tls/cdn/dns (30 целей × 4 интерфейса):
+  - `parse_curl_metrics()` → один awk (18→2 fork на вызов)
+  - `to_ms()` → чистая арифметика оболочки (1→0 fork на вызов)
+  - сборка JSON в горячих циклах → встроенный printf (6–11→0 fork на ячейку)
+  - `prev_verdict_for()` → поиск по заранее разобранному кэшу (4→1 fork на ячейку)
+  - `tbl_cell_v()` — вариант `tbl_cell()` на глобальных переменных (1→0 fork)
+  - `precache_geo_cc()` / `geo_cc_fast()` — заранее закэшированный поиск CC (3→0 fork)
+  - `_cdn_format_cell_v()` — вариант на глобальных переменных для ячеек CDN
 
 ## [0.2.5] - 2026-08-10
 
-### Changed
-- **Rich status dashboard** — `status.sh` output significantly improved:
-  - Each WAN path shows external IP, country code, and detailed tunnel type
-    (wireguard/openvpn/gre/etc instead of generic "tunnel")
-  - Fail reason shown in header: `✗ Fail (nwg2 unreachable)`
-  - DNS leak enriched with provider name and country from cache
-  - IPv6 leak check added to System section
-  - Context section shows SmartDNS and geo-split status when available
-  - `?/?` no longer shown when no cache exists; `Last check: never` hidden
-  - Path columns aligned with printf formatting for readability
-- **JSON output enriched** — added `iface_type`, `ext_ip`, `cc`, `ipv6_leak`
-  fields to JSON output for WebUI consumption
+### Изменено
+- **Подробная панель статуса** — вывод `status.sh` заметно расширен:
+  - у каждого пути WAN внешний IP, код страны и подробный тип туннеля
+    (wireguard/openvpn/gre и т. д. вместо общего "tunnel")
+  - причина сбоя в заголовке: `✗ Fail (nwg2 unreachable)`
+  - DNS-утечка дополнена именем поставщика и страной из кэша
+  - проверка IPv6-утечки добавлена в раздел System
+  - раздел контекста показывает состояние SmartDNS и geo-split, если они есть
+  - `?/?` больше не показывается, если кэша нет; `Last check: never` скрыт
+  - столбцы путей выровнены через printf
+- **Расширен вывод JSON** — для WebUI добавлены поля `iface_type`, `ext_ip`, `cc`, `ipv6_leak`
 
 ## [0.2.4] - 2026-08-10
 
-### Fixed
-- **DNS queries now use SmartDNS directly** — `dig` on the router goes through
-  `ndnproxymain` (:53), not SmartDNS, because PREROUTING DNAT only intercepts
-  LAN clients. DNS/check commands now query SmartDNS on its actual port
-  (`@127.0.0.1 -p 6053`) when detected. Label changed from misleading
-  `"SmartDNS (via :53)"` to accurate `"SmartDNS (:6053)"`.
+### Исправлено
+- **Запросы DNS идут в SmartDNS напрямую** — `dig` на роутере проходит через
+  `ndnproxymain` (:53), а не через SmartDNS, потому что PREROUTING DNAT перехватывает
+  только клиентов LAN. Команды DNS и check теперь спрашивают SmartDNS на его реальном порту
+  (`@127.0.0.1 -p 6053`), если он обнаружен. Подпись сменена с неточной
+  `"SmartDNS (via :53)"` на точную `"SmartDNS (:6053)"`.
 
 ## [0.2.3] - 2026-08-10
 
-### Changed
-- **DRY batch runner** — extracted duplicated "batched parallel fetch with
-  progress" pattern (~200 lines across 4 files) into `batch_run_parallel()`
-  helper in `output.sh`. Callbacks: `_compare_run_batch`, `_tls_run_batch`,
+### Изменено
+- **Общий запуск пакетов** — повторявшийся шаблон «параллельная выборка пакетами
+  с прогрессом» (~200 строк в 4 файлах) вынесен в `batch_run_parallel()`
+  в `output.sh`. Обратные вызовы: `_compare_run_batch`, `_tls_run_batch`,
   `_cdn_run_batch`, `_dns_run_batch`.
-- **DRY auto-width** — extracted duplicated first-column width calculation
-  (~5 lines × 3 files) into `auto_label_width()` helper in `output.sh`.
-- **Progress shows section label** — progress indicator now displays section
-  name: `HTTP: 12/36...`, `TLS: 12/36...`, `CDN: 5/18...`, `DNS: 12/36...`
-  (was generic `Fetching: N/M...`).
+- **Общая автоширина** — повторявшийся расчёт ширины первого столбца
+  (~5 строк × 3 файла) вынесен в `auto_label_width()` в `output.sh`.
+- **Прогресс показывает имя секции** — индикатор теперь пишет имя секции:
+  `HTTP: 12/36...`, `TLS: 12/36...`, `CDN: 5/18...`, `DNS: 12/36...`
+  (раньше общее `Fetching: N/M...`).
 
 ## [0.2.2] - 2026-08-10
 
-### Changed
-- **`cmd_all` unbuffered text output** — in text mode, section output now streams
-  line-by-line via pipe instead of buffering to a temp file. JSON mode unchanged.
+### Изменено
+- **Текстовый вывод `cmd_all` без буфера** — в текстовом режиме секции идут
+  построчно через конвейер, а не копятся во временном файле. Режим JSON не изменился.
 
-### Fixed
-- **`cmd_all` progress visibility** — removed `2>&1` from step command
-  redirections so stderr (progress lines) goes to real terminal, not temp file.
-  `[ -t 2 ]` now correctly detects TTY during batch execution.
-- **DNS table: auto-width Domain column** — `console.cloud.google.com` (26 chars)
-  no longer overflows the 22-char column. Dynamic width (min 22, max 32).
-- **IPv6-ready IP columns** — `Resolved IP` widened from 18 to 24 chars in DNS
-  and TLS single-host tables. Accommodates shortened IPv6 addresses.
+### Исправлено
+- **Видимость прогресса `cmd_all`** — из перенаправлений команд шагов убран `2>&1`,
+  чтобы stderr (строки прогресса) шёл в настоящий терминал, а не во временный файл.
+  `[ -t 2 ]` снова верно видит TTY во время пакетного выполнения.
+- **Таблица DNS: автоширина столбца Domain** — `console.cloud.google.com` (26 символов)
+  больше не вылезает из столбца в 22 символа. Ширина динамическая (минимум 22, максимум 32).
+- **Столбцы IP готовы к IPv6** — `Resolved IP` расширен с 18 до 24 символов в таблицах DNS
+  и TLS для одного хоста. Хватает на укороченные адреса IPv6.
 
 ## [0.2.1] - 2026-08-10
 
-### Changed
-- **Streaming output for single commands** — `net-check.sh geo`, `comp`, etc.
-  now stream table rows in real time (removed spinner + buffered output wrapper).
-  `_spinner_msg()` function removed from main dispatcher.
-- **Progress indicator for batch commands** — `comp`, `cdn`, `tls`, `dns`
-  show `Fetching: N/M...` on stderr during parallel phase (text mode, tty only;
-  suppressed for `--json` and non-tty). Replaces animated spinner.
-- **`cmd_all` runs without spinner** — `start_spinner`/`stop_spinner` removed
-  from Step 1 (geo) and data-driven loop (steps 2–9). `section_banner` suffices.
-- **Auto-width first column in comparison tables** — `cmp_header()` accepts
-  4th parameter `_label_w` (default 20). `cmd_compare`, `cmd_tls_check_targets`,
-  `cmd_cdn_all` compute max hostname length (min 20, max 30) before rendering.
-  `cmp_row_start()` uses `_CMP_LABEL_W` for consistent alignment.
+### Изменено
+- **Потоковый вывод одиночных команд** — `net-check.sh geo`, `comp` и другие
+  теперь отдают строки таблицы сразу (убраны индикатор и обёртка с буфером).
+  Функция `_spinner_msg()` убрана из главного диспетчера.
+- **Индикатор прогресса для пакетных команд** — `comp`, `cdn`, `tls`, `dns`
+  пишут `Fetching: N/M...` в stderr на параллельной фазе (текстовый режим, только tty;
+  скрыто для `--json` и не-tty). Вместо анимированного индикатора.
+- **`cmd_all` без индикатора** — `start_spinner`/`stop_spinner` убраны
+  из шага 1 (geo) и цикла по данным (шаги 2–9). Хватает `section_banner`.
+- **Автоширина первого столбца сравнительных таблиц** — `cmp_header()` принимает
+  4-й параметр `_label_w` (по умолчанию 20). `cmd_compare`, `cmd_tls_check_targets`
+  и `cmd_cdn_all` считают максимальную длину имени хоста (минимум 20, максимум 30) до отрисовки.
+  `cmp_row_start()` берёт `_CMP_LABEL_W`, чтобы выравнивание было ровным.
 
 ## [0.2.0] - 2026-08-10
 
-### Added
-- **Granular TLS failure classification** — `classify_failure()` now sub-classifies
-  `ssl_verify_result` codes: `Untrusted CA` (18/19/20/21), `Cert expired` (10),
-  `Cert revoked` (23), `Hostname mismatch` (62). Only unknown codes → `MITM detected`.
-  Fixes sberbank.ru false positive (Russian national CA ≠ MITM).
-- **New per-path verdicts**: `DNS resolution failed` (curl exit 6),
-  `Server error (5xx)`, `Empty response` (curl exit 52),
-  `Partial transfer` (curl exit 18)
-- **New overall verdicts** in `determine_verdict()`: `cert_issue` (all paths fail
-  with same cert error), `dns_issue` (all DNS failures), `server_down` (all 5xx).
-  Sub-classifies `all_fail` to distinguish infra issues from network filtering.
-- **`known-cas.conf`** — allowlist of national/regional CAs (Russia НУЦ, Kazakhstan
-  QAZNET, China CFCA/CNNIC, Turkey TÜBİTAK, India NIC, Iran, Korea, Thailand,
-  Brazil ICP-Brasil). TLS check shows `NCA`/`NatCA` instead of flagging as MITM.
-- **`_check_known_ca()`** helper — issuer matching against `known-cas.conf`
-  (used by TLS comparison table to distinguish national CAs from MITM proxies)
+### Добавлено
+- **Дробная классификация сбоев TLS** — `classify_failure()` теперь различает
+  коды `ssl_verify_result`: `Untrusted CA` (18/19/20/21), `Cert expired` (10),
+  `Cert revoked` (23), `Hostname mismatch` (62). Только неизвестные коды дают `MITM detected`.
+  Убирает ложное срабатывание на sberbank.ru (российский национальный CA ≠ MITM).
+- **Новые вердикты по пути**: `DNS resolution failed` (curl, код 6),
+  `Server error (5xx)`, `Empty response` (curl, код 52),
+  `Partial transfer` (curl, код 18)
+- **Новые общие вердикты** в `determine_verdict()`: `cert_issue` (все пути падают
+  с одной и той же ошибкой сертификата), `dns_issue` (все сбои DNS), `server_down` (все 5xx).
+  Уточняет `all_fail`, чтобы отделить проблемы инфраструктуры от сетевой фильтрации.
+- **`known-cas.conf`** — allowlist национальных и региональных CA (Россия НУЦ, Казахстан
+  QAZNET, Китай CFCA/CNNIC, Турция TÜBİTAK, Индия NIC, Иран, Корея, Таиланд,
+  Бразилия ICP-Brasil). Проверка TLS показывает `NCA`/`NatCA`, а не помечает их как MITM.
+- Вспомогательная `_check_known_ca()` — сопоставление издателя с `known-cas.conf`
+  (сравнительная таблица TLS отличает национальные CA от MITM-прокси)
 
-### Changed
-- `short_reason()`: new compact tags — `UNTCA`, `EXPRD`, `REVKD`, `SSLNM`,
+### Изменено
+- `short_reason()`: новые короткие метки — `UNTCA`, `EXPRD`, `REVKD`, `SSLNM`,
   `DNSFL`, `SVERR`, `EMPTY`, `PARTL`
-- `determine_verdict()`: extended input format `iface:status:ttfb:reason`
-  (backward-compatible — reason field optional)
-- TLS comparison table: `known_ca` path status (`NCA` tag, dim color),
-  `known_ca` per-host verdict (`NatCA` display)
+- `determine_verdict()`: расширенный формат входа `iface:status:ttfb:reason`
+  (обратно совместимо — поле reason необязательно)
+- Сравнительная таблица TLS: состояние пути `known_ca` (метка `NCA`, приглушённый цвет),
+  вердикт хоста `known_ca` (показ `NatCA`)
 
 ## [0.1.3] - 2026-08-10
 
-### Fixed
-- `load_zone_context()`: detect standby tunnel interfaces from source-based routing tables for non-geo segment enumeration
+### Исправлено
+- `load_zone_context()`: резервные туннельные интерфейсы берутся из таблиц маршрутизации на основе источника, чтобы перечислить сегменты вне геозоны
 
 ## [0.1.2] - 2026-08-08
 
-### Fixed
-- `cdn-all`: restored `ℹ️ cached` marker in CDN comparison table verdict —
-  `cc_cached` was computed but never displayed
-- `dns-leak`: added `ℹ️ cached` marker for GeoIP cache hits on resolver IPs —
-  `geolocate_ip()` was called without cache tracking
+### Исправлено
+- `cdn-all`: в вердикте сравнительной таблицы CDN снова есть метка `ℹ️ cached` —
+  `cc_cached` считался, но не показывался
+- `dns-leak`: метка `ℹ️ cached` для попаданий в кэш GeoIP по IP резолверов —
+  `geolocate_ip()` вызывался без учёта кэша
 
 ## [0.1.1] - 2026-08-08
 
-### Added
-- CDN table (`cdn-all`): category group separators (`── Global ──`,
-  `── International ──`, `── Zone ──`) matching other comparison tables
+### Добавлено
+- Таблица CDN (`cdn-all`): разделители групп категорий (`── Global ──`,
+  `── International ──`, `── Zone ──`), как в других сравнительных таблицах
 
 ## [0.1.0] - 2026-08-08
 
-### Changed
-- **i18n: worldwide check-targets** — `check-targets.conf` expanded to 40+ country
-  zones with runtime zone filtering via `_cat_config()` (only active zone loaded)
-- **i18n: worldwide cdn-domains** — `cdn-domains.conf` expanded with zone CDN
-  entries for 12+ countries, runtime zone filtering
-- **i18n: CHECK_ZONE** — new `CHECK_ZONE="auto"` setting in `defaults.conf`;
-  set to any ISO code or union name for standalone use without smartdns-geo-conf
-- **i18n: custom targets** — user customizations now go into `*-custom.conf`
-  (conffiles); main configs updated with package, not conffiles
-- `anomaly-markers.conf`: added international block page markers (TR, IR, CN, IN)
-- `_get_isp_dns()`: fallback to `/etc/resolv.conf` for non-Keenetic routers
+### Изменено
+- **i18n: цели проверки по всему миру** — `check-targets.conf` расширен до 40+ зон
+  стран с фильтрацией зоны во время работы через `_cat_config()` (грузится только активная зона)
+- **i18n: домены CDN по всему миру** — в `cdn-domains.conf` добавлены записи CDN зон
+  для 12+ стран, фильтрация зоны во время работы
+- **i18n: CHECK_ZONE** — новый параметр `CHECK_ZONE="auto"` в `defaults.conf`;
+  любой код ISO или имя объединения для автономной работы без smartdns-geo-conf
+- **i18n: свои цели** — правки пользователя теперь в `*-custom.conf`
+  (conffiles); основные конфигурации обновляются вместе с пакетом и не являются conffiles
+- `anomaly-markers.conf`: добавлены международные маркеры страниц блокировки (TR, IR, CN, IN)
+- `_get_isp_dns()`: запасной путь через `/etc/resolv.conf` для роутеров не Keenetic
 
 ## [0.0.5] - 2026-08-01
 
-### Added
-- `check-targets.conf`: new targets — Avito (zone-ru), Kufar + Beltelecom
+### Добавлено
+- `check-targets.conf`: новые цели — Avito (zone-ru), Kufar + Beltelecom
   (zone-by), Nur.kz + Krisha (zone-kz), Spotify (intl-streaming), Perplexity
   (intl-ai), Telegram + Reddit (intl-services), AWS + Google Cloud (intl-cloud)
 - `cdn-domains.conf`: VK CDN (zone-ru), Facebook CDN + jsDelivr CDN
-- `http-core.sh`: curl exit 92 → "HTTP/2 protocol error" (H2ERR) classification
+- `http-core.sh`: код выхода curl 92 → классификация "HTTP/2 protocol error" (H2ERR)
 
-### Removed
-- `check-targets.conf`: 21vek.by (zone-by), kaspi.kz (zone-kz) — server-side
-  geo-restrictions for non-local IPs, always fail from abroad
-- `cdn-domains.conf`: cdn.ozon.ru — HTTP/2 PROTOCOL_ERROR on root URL probe
+### Удалено
+- `check-targets.conf`: 21vek.by (zone-by), kaspi.kz (zone-kz) — гео-ограничение
+  на стороне сервера для неместных IP, из-за рубежа всегда не проходит
+- `cdn-domains.conf`: cdn.ozon.ru — HTTP/2 PROTOCOL_ERROR при зонде корневого URL
 
-### Changed
-- `cdn-domains.conf`: Instagram CDN endpoint i.instagram.com → scontent.cdninstagram.com
-  (i.instagram.com returns app-level errors for non-app requests)
+### Изменено
+- `cdn-domains.conf`: конечная точка Instagram CDN i.instagram.com → scontent.cdninstagram.com
+  (i.instagram.com отвечает ошибками уровня приложения на запросы не из приложения)
 
 ## [0.0.4] - 2026-08-01
 
-### Changed
-- `wan.sh`: ► active route detection now uses kernel FIB with auto-detected tunnel
-  fwmark (`--as auto` mode). New `_detect_auto_fwmark()` finds the first tunnel
-  tunnel fwmark from ip rules, `fib_active_dev()` queries `ip route get` with
-  fwmark + iif br0 — correctly simulates tunnel-policy LAN client. Zone IPs hit
-  geo-split tables (prio 50/51), intl IPs hit fwmark rule (prio 100+) → tunnel.
-  Replaces old `route_dev_for_ip()` which queried without fwmark (always returned
-  default route for intl targets). Removed `intl-*` category heuristic fallback.
+### Изменено
+- `wan.sh`: определение активного маршрута ► теперь через FIB ядра с автоматически найденным fwmark
+  туннеля (режим `--as auto`). Новая `_detect_auto_fwmark()` берёт первый fwmark туннеля
+  из ip rule, `fib_active_dev()` спрашивает `ip route get` с
+  fwmark и iif br0 — так моделируется клиент LAN с политикой туннеля. IP зоны попадают
+  в таблицы geo-split (приоритет 50/51), международные IP — в правило fwmark (приоритет 100+) → туннель.
+  Вместо прежней `route_dev_for_ip()`, которая спрашивала без fwmark (для международных целей всегда
+  возвращала маршрут по умолчанию). Убран эвристический запасной путь по категории `intl-*`.
 
 ## [0.0.3] - 2026-07-30
 
-### Changed
-- `status.sh`: colored status marks and bold section headers via `lib/status.sh` color system; `--color`/`--no-color` flag support
-- `output.sh`: `setup_colors()` delegates to `lib/status.sh:status_setup_colors()` — single source of ANSI color codes
-- `net-check.sh`: added `lib/status.sh` to source chain
+### Изменено
+- `status.sh`: цветные отметки статуса и жирные заголовки секций через цветовую систему `lib/status.sh`; поддержка флагов `--color`/`--no-color`
+- `output.sh`: `setup_colors()` делегирует в `lib/status.sh:status_setup_colors()` — единый источник ANSI-кодов цвета
+- `net-check.sh`: `lib/status.sh` добавлен в цепочку source
 
 ## [0.0.2] - 2026-07-30
 
-### Fixed
+### Исправлено
 
-- **dns-leak: false LEAK on multi-tunnel setups** — resolvers at tunnel tunnel
-  exit countries (NL, LV, SE, NO etc.) were incorrectly flagged as leaks.
-  New 3-level classification: known provider → tunnel exit → real leak.
-  Only ISP-country resolvers are flagged as leaks when tunnels are configured.
-- **dns-leak: whoami fallback ISP WAN IP false positive** — queries #2/#3
-  in the whoami fallback bypass SmartDNS and return the router's WAN IP,
-  causing false leak detection. Now skipped when SmartDNS is active.
-- **dns-leak: inverted elif logic** — without SmartDNS, ISP DNS was flagged
-  as a leak instead of being treated as the expected resolver.
+- **dns-leak: ложный LEAK при нескольких туннелях** — резолверы в странах выхода
+  туннеля (NL, LV, SE, NO и т. д.) ошибочно считались утечкой.
+  Новая классификация из 3 уровней: известный поставщик → выход туннеля → настоящая утечка.
+  При настроенных туннелях утечкой помечаются только резолверы в стране ISP.
+- **dns-leak: ложное срабатывание whoami на WAN IP ISP** — запросы №2 и №3
+  в запасном пути whoami обходят SmartDNS и возвращают WAN IP роутера,
+  из-за этого утечка определялась ложно. Теперь пропускаются, если SmartDNS активен.
+- **dns-leak: перевёрнутая логика elif** — без SmartDNS DNS ISP помечался
+  как утечка, а не как ожидаемый резолвер.
 
-### Changed
+### Изменено
 
-- **dns-leak: tunnel/direct status labels** — resolvers now show `tunnel ✅`
-  (at tunnel exit) or `direct ✅` (via ISP) instead of plain `✅`.
-- **dns-leak: wider table columns** — Resolver IP 18→24 (IPv6 fit),
-  Provider 40→50 (long names fit).
-- **DNS_LEAK_WAIT** increased from 3s to 7s — multi-tunnel setups need more
-  time for all probe responses to propagate.
+- **dns-leak: подписи tunnel/direct** — у резолверов теперь `tunnel ✅`
+  (на выходе туннеля) или `direct ✅` (через ISP) вместо простого `✅`.
+- **dns-leak: шире столбцы таблицы** — IP резолвера 18→24 (влезает IPv6),
+  поставщик 40→50 (влезают длинные имена).
+- **DNS_LEAK_WAIT** увеличен с 3 с до 7 с — при нескольких туннелях нужно больше
+  времени, чтобы дошли все ответы зондов.
 
 ## [0.0.1] - 2026-07-21
 
-Initial pre-release. Full CLI network diagnostics tool for Keenetic routers
-with Entware.
+Начальный предварительный выпуск. Полноценный CLI-инструмент сетевой диагностики для роутеров Keenetic
+с Entware.
 
-### Commands
+### Команды
 
-- **`all`** — full diagnostics suite (9 steps): geo → conn → ipv6 → dns →
+- **`all`** — полный набор диагностики (9 шагов): geo → conn → ipv6 → dns →
   dns-leak → comp → cdn → tls → speed
-- **`geo`** — egress point verification via GeoIP per WAN interface
-- **`conn`** — ping, TCP :443, traceroute hops, packet loss, MTU discovery,
-  DNS/TCP/TLS/Total timing
-- **`dns`** — DNS resolution & geolocation for all check targets; detects ISP
-  DNS filtering (NXDOMAIN/bogon) and split-DNS zone alignment
-- **`dns-leak`** — DNS leak test via subdomain probing; discovers recursive
-  resolvers; 3-level fallback (dnscheck.tools → bash.ws → whoami)
-- **`comp`** — HTTP reachability matrix across WAN interfaces with TTFB,
-  failure classification, route verification, and historical diff (▲/▼ markers)
-- **`cdn`** — CDN geo-steering analysis via EDNS Client Subnet; comparison
-  table with per-interface edge country + geo-steering verdict
-- **`tls`** — TLS certificate fingerprint
-  comparison across paths; MITM proxy detection via known CA list
-- **`speed`** — download + upload throughput via Cloudflare endpoint
-- **`ipv6`** — detects IPv6 traffic bypassing tunnel via ISP interface
-- **`check`** — deep single/multi-domain check: HTTP + DNS + TLS + CDN with
-  per-interface comparison tables (always uses multi-domain layout)
+- **`geo`** — проверка точки выхода через GeoIP по каждому интерфейсу WAN
+- **`conn`** — ping, TCP :443, хопы traceroute, потери пакетов, обнаружение MTU,
+  тайминги DNS/TCP/TLS/Total
+- **`dns`** — разрешение DNS и геолокация всех целей проверки; обнаруживает фильтрацию DNS
+  у ISP (NXDOMAIN/bogon) и согласованность зон split-DNS
+- **`dns-leak`** — тест DNS-утечек зондированием поддоменов; находит рекурсивные
+  резолверы; запасной путь из 3 уровней (dnscheck.tools → bash.ws → whoami)
+- **`comp`** — матрица HTTP-доступности по интерфейсам WAN с TTFB,
+  классификацией сбоев, проверкой маршрута и историческим diff (маркеры ▲/▼)
+- **`cdn`** — анализ CDN geo-steering через EDNS Client Subnet; сравнительная
+  таблица со страной edge по каждому интерфейсу и вердиктом geo-steering
+- **`tls`** — сравнение отпечатков TLS-сертификатов
+  по путям; обнаружение MITM-прокси по списку известных CA
+- **`speed`** — пропускная способность download и upload через endpoint Cloudflare
+- **`ipv6`** — обнаруживает IPv6-трафик, который обходит туннель через интерфейс ISP
+- **`check`** — глубокая проверка одного или нескольких доменов: HTTP + DNS + TLS + CDN
+  со сравнительными таблицами по интерфейсам (всегда макет для нескольких доменов)
 
-### Features
+### Возможности
 
-- **Multi-WAN support** — all checks run per WAN interface with automatic
-  detection (PPPoE, WireGuard, OpenVPN, etc.)
-- **Geo-zone awareness** — integrates with `geo-split` / `smartdns-geo-conf`
-  for route verification against expected zone routing
-- **ISP blocking detection** — classifies failures: TIMEOUT, DPI, TLS error,
-  MITM, RST, redirect loops, anomaly page markers
-- **Privacy mode** (`--privacy`) — anonymizes IPs, ASN, cities, country codes
-  in output for safe sharing
-- **JSON output** (`--json`) — machine-readable output for all commands
-- **Verbose/quiet modes** (`--verbose` / `--quiet`) — timing waterfall or
-  one-line summary
-- **No-color mode** (`--no-color` / `NO_COLOR`) — plain text with Unicode
-  fallback for emoji
-- **Exit codes** — `0` = all ok, `1` = degraded, `2` = critical
-- **GeoIP caching** — file-based cache with TTL, HTTP 429 rate-limit handling
-- **Adaptive parallelism** — batch size auto-tuned by CPU load; `nice` priority
-  to reduce router contention
-- **Ctrl+C** — clean termination of all child processes
+- **Поддержка Multi-WAN** — все проверки идут по каждому интерфейсу WAN с автоматическим
+  определением (PPPoE, WireGuard, OpenVPN и т. д.)
+- **Учёт геозоны** — стыкуется с `geo-split` и `smartdns-geo-conf`
+  и сверяет маршрут с ожидаемой маршрутизацией зоны
+- **Обнаружение блокировок ISP** — классифицирует сбои: TIMEOUT, DPI, ошибка TLS,
+  MITM, RST, циклы перенаправлений, маркеры страниц аномалий
+- **Режим приватности** (`--privacy`) — скрывает в выводе IP, ASN, города и коды стран,
+  чтобы вывод можно было передавать
+- **Вывод JSON** (`--json`) — машинно читаемый вывод всех команд
+- **Режимы подробный и краткий** (`--verbose` / `--quiet`) — каскад таймингов или
+  однострочная сводка
+- **Режим без цвета** (`--no-color` / `NO_COLOR`) — простой текст, для emoji запасной вариант Unicode
+- **Коды выхода** — `0` = всё в порядке, `1` = деградация, `2` = критично
+- **Кэш GeoIP** — файловый кэш с TTL, обработка ограничения HTTP 429
+- **Адаптивный параллелизм** — размер пакета подстраивается по загрузке CPU; приоритет `nice`,
+  чтобы меньше мешать роутеру
+- **Ctrl+C** — чистое завершение всех дочерних процессов
 
-### Configuration
+### Конфигурация
 
-- `config/defaults.conf` — all tunable parameters (URLs, timeouts, thresholds,
-  batch sizes)
-- `config/check-targets.conf` — HTTP check targets with geo-zone categories
-- `config/cdn-domains.conf` — CDN domains for geo-steering analysis
-- `config/dns-providers.conf` — DNS provider identification patterns
-- `config/anomaly-markers.conf` — ISP/DPI block page detection strings
-- `config/mitm-issuers.conf` — known MITM proxy CA patterns
-- `config/wellknown-ips.conf` — well-known DNS resolver IPs
-- `config/privacy-providers.conf` — fake provider names for privacy mode
-- All config files protected from overwrite on package upgrade (`conffiles`)
+- `config/defaults.conf` — все настраиваемые параметры (URL, таймауты, пороги,
+  размеры пакетов)
+- `config/check-targets.conf` — цели HTTP-проверок с категориями геозон
+- `config/cdn-domains.conf` — домены CDN для анализа geo-steering
+- `config/dns-providers.conf` — шаблоны определения поставщиков DNS
+- `config/anomaly-markers.conf` — строки обнаружения страниц блокировки ISP/DPI
+- `config/mitm-issuers.conf` — шаблоны известных CA MITM-прокси
+- `config/wellknown-ips.conf` — IP известных резолверов DNS
+- `config/privacy-providers.conf` — подставные имена поставщиков для режима приватности
+- Все файлы конфигурации защищены от перезаписи при обновлении пакета (`conffiles`)

@@ -1,96 +1,81 @@
-# Bundle Patch System
+# Патчи бандлов штатного интерфейса
 
-Auto-detected sed patches for Keenetic stock UI Angular bundles.
+Патчи через sed для Angular-бандлов штатного интерфейса Keenetic. Семейство патча определяется по содержимому бандла.
 
-Different routers may run different KeeneticOS firmware versions and CPU
-architectures. Each firmware produces a unique Angular bundle (`main-<HASH>.js`).
-Patches are auto-detected from bundle content and applied dynamically — no
-per-enum configuration files needed.
+На разных роутерах стоят разные версии KeeneticOS и разные процессоры. Каждая прошивка собирает свой бандл (`main-<ХЕШ>.js`). Патч выбирается по содержимому и применяется на месте. Отдельный файл под каждую сборку не нужен.
 
-## How it works
+## Как это устроено
 
-1. `patch-stock-ui.sh` copies stock UI bundles to `webui/htdocs-cache/`
-2. Extracts the DashboardSection enum name from the bundle
-   (greps for `Xx={INTERNET:"INTERNET"` — the unique enum definition)
-3. Detects **patch family** from architecture markers:
+1. `patch-stock-ui.sh` копирует бандлы штатного интерфейса в `webui/htdocs-cache/`
+2. Достаёт имя перечисления DashboardSection из бандла (ищет `Xx={INTERNET:"INTERNET"` — это единственное такое определение)
+3. Определяет **семейство патча** по маркерам архитектуры:
    - `signal`: `this.templateMap().get` (KeeneticOS 5.1.0+)
    - `setter`: `set order(e){this.elementsOrder=e}` (KeeneticOS 5.0.x)
-4. Sources `families/<family>.sh` and applies patches with the detected enum
-5. Verifies each patch via `patch_sed()` (check string after sed)
-6. On any patch failure: rolls back to clean stock bundle
-7. Writes `webui/htdocs-cache/.patch-state` for `status.sh`
+4. Подключает `families/<семейство>.sh` и применяет патчи с найденным именем перечисления
+5. Каждый патч проверяет `patch_sed()` (строка-проверка после sed)
+6. Если хоть один патч не лёг, бандл откатывается к чистому штатному
+7. Пишет `webui/htdocs-cache/.patch-state` для `status.sh`
 
-**Key benefit:** when a firmware upgrade only renames the minified enum
-(e.g. `Mo`→`Oo`→`Lo`→`zo`), patches apply automatically with zero changes.
-A new release is only needed when the Angular **architecture** changes
-(e.g. setter→signal transition in 5.1.0).
+Когда прошивка только переименовывает минифицированное перечисление (например, `Mo` → `Oo` → `Lo` → `zo`), патчи встают сами. Новый выпуск нужен, когда меняется **архитектура** Angular (переход setter → signal в 5.1.0).
 
-## File structure
+## Файлы
 
 ```
 webui/patches/
 ├── families/
-│   ├── setter.sh   # Patch logic for setter-based Angular (5.0.x)
-│   └── signal.sh   # Patch logic for signal-based Angular (5.1.0+)
+│   ├── setter.sh   # Логика патча для Angular на setter (5.0.x)
+│   └── signal.sh   # Логика патча для Angular на signal (5.1.0+)
 └── README.md
 ```
 
-## Patch families
+## Семейства патчей
 
-Each family file contains the sed patterns for a specific Angular architecture.
-The enum name is passed as a parameter (`$_E`) — patterns are enum-agnostic.
+В файле семейства лежат шаблоны sed под конкретную архитектуру Angular. Имя перечисления передаётся параметром (`$_E`). Шаблоны от имени не зависят.
 
-| Family | File | Architecture | Marker |
+| Семейство | Файл | Архитектура | Маркер |
 |--------|------|-------------|--------|
-| **setter** | `families/setter.sh` | `set order(e)`, `templateMap.get(e)`, single layout array | `set order(e){this.elementsOrder=e}` |
-| **signal** | `families/signal.sh` | `order=V([])` signal, `templateMap().get(e)`, desktop/mobile split | `this.templateMap().get` |
+| **setter** | `families/setter.sh` | `set order(e)`, `templateMap.get(e)`, один массив раскладки | `set order(e){this.elementsOrder=e}` |
+| **signal** | `families/signal.sh` | сигнал `order=V([])`, `templateMap().get(e)`, отдельно рабочий стол и телефон | `this.templateMap().get` |
 
-### When to create a new family
+### Когда заводить новое семейство
 
-Create a new `families/<name>.sh` when Angular changes its architecture
-fundamentally (e.g. setter → signal transition in 5.1.0). Signs:
-- `getTemplate` signature changes
-- Order management changes (setter vs signal vs something new)
-- Layout structure changes (single array vs desktop/mobile split)
+Новый `families/<имя>.sh` нужен, когда Angular меняет архитектуру целиком (как переход setter → signal в 5.1.0). Признаки:
 
-Also add a new architecture marker grep in `patch-stock-ui.sh` (the
-`DETECTED_FAMILY` detection block).
+- меняется сигнатура `getTemplate`
+- меняется хранение порядка (setter, signal или что-то новое)
+- меняется раскладка (один массив или раздельно рабочий стол и телефон)
 
-## Rollback on failure
+В `patch-stock-ui.sh` в блок `DETECTED_FAMILY` добавляется новый маркер.
 
-Before applying patches, `patch-stock-ui.sh` backs up the bundle:
-`cp "$BUNDLE" "$BUNDLE.orig"`. If any `patch_sed` fails (`_PATCH_FAIL > 0`),
-the original is restored. This ensures the UI is never left in a partially
-patched (broken) state — it falls back to stock UI + inject.js overlay.
+## Откат при ошибке
 
-## Diagnostics after firmware upgrade
+Перед патчем `patch-stock-ui.sh` копирует бандл: `cp "$BUNDLE" "$BUNDLE.orig"`. Если `patch_sed` падает (`_PATCH_FAIL > 0`), оригинал возвращается. Интерфейс не остаётся полусломанным: остаётся штатный UI и накладка inject.js.
+
+## Диагностика после обновления прошивки
 
 ```sh
-# 1. SSH to router, check auto-patch result
+# 1. По SSH посмотреть результат автопатча
 logread -e ew-patch
 
-# 2. Check patch state
+# 2. Состояние патча
 cat /opt/keenetic-entware-extras/webui/htdocs-cache/.patch-state
 
-# 3. Verify architecture markers in stock bundle
+# 3. Маркеры архитектуры в штатном бандле
 grep -o '[A-Za-z][A-Za-z0-9]*={INTERNET:"INTERNET"' /usr/share/htdocs_/main-*.js
 grep -c 'this.templateMap().get' /usr/share/htdocs_/main-*.js
 
-# 4. Full compatibility check from dev machine
+# 4. Полная проверка совместимости с машины разработчика
 ./scripts/stock-webui-check.sh --host <router>
 ```
 
-## Family file contract
+## Контракт файла семейства
 
-Each `families/<name>.sh` must:
+Каждый `families/<имя>.sh` должен:
 
-- Define `_apply_<name>_patches()` accepting two arguments: enum name and bundle path
-- Use `patch_sed "<label>" "<check>" "<sed_expr>" "$_bundle"` for each patch
-  (`patch_sed` is defined in `patch-stock-ui.sh`)
-- Not call `exit` (sourced by main script)
-- Be POSIX sh compatible (no bash-isms)
-- Use `$_E` (first argument) for enum substitution in sed patterns
+- объявить `_apply_<имя>_patches()` с двумя аргументами: имя перечисления и путь к бандлу
+- для каждого патча вызывать `patch_sed "<метка>" "<проверка>" "<выражение sed>" "$_bundle"` (`patch_sed` объявлен в `patch-stock-ui.sh`)
+- не вызывать `exit` (файл подключается через source)
+- быть совместимым с POSIX sh, без особенностей bash
+- подставлять в sed имя перечисления через `$_E` (первый аргумент)
 
-## See also
-
-- [Stock htdocs backup runbook](../docs/stock-backup-runbook.md) — how to capture stock UI after firmware upgrades
+Отдельного файла с регламентом снятия штатного UI в дереве нет. Команды выше снимают то, что нужно после обновления прошивки.

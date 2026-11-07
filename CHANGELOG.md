@@ -1,351 +1,351 @@
-# Changelog
+# Журнал изменений
 
-All notable changes to `keenetic-entware-extras` (base package) are documented here.<!--  -->
+Все заметные изменения `keenetic-entware-extras` (базовый пакет) описаны здесь.<!--  -->
 
-Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/)
-Versioning: [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html)
+Формат: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/)
+Версионирование: [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html)
 
 ## [0.20.0] - 2026-11-05
 
-### Fixed
-- `scripts/install.sh`: `geo-split-data` and other hidden kee dependencies not upgraded — `install_pkg()` now uses `opkg upgrade` for already-installed packages (upgrades dependencies too); `upgradable_pkgs()` tracks hidden kee packages (`geo-split-data`, `aggregate6`) for upgrade detection
+### Исправлено
+- `scripts/install.sh`: `geo-split-data` и другие скрытые зависимости kee не обновлялись — `install_pkg()` теперь использует `opkg upgrade` для уже установленных пакетов (обновляет и зависимости); `upgradable_pkgs()` отслеживает скрытые пакеты kee (`geo-split-data`, `aggregate6`) для обнаружения обновлений
 
-### Added
-- `scripts/install.sh`: hidden dependency upgrade display — shows `geo-split-data`, `aggregate6` upgrade info below the package table when updates available
-- `scripts/install.sh`: Entware system package upgrade hint — counts non-kee upgradable packages and shows `opkg upgrade` recommendation in the menu
+### Добавлено
+- `scripts/install.sh`: показ обновления скрытых зависимостей — сведения об обновлении `geo-split-data` и `aggregate6` выводятся под таблицей пакетов, когда обновления доступны
+- `scripts/install.sh`: подсказка об обновлении системных пакетов Entware — считает обновляемые пакеты не из kee и показывает в меню рекомендацию `opkg upgrade`
 
 ## [0.19.2] - 2026-10-28
 
-### Fixed
-- `scripts/install.sh`: `P) Upgrade` silently exits without upgrading — `upgradable_pkgs()` returns non-zero exit code when last catalog package is not upgradable, triggering `set -e` script termination; added explicit `return 0`
+### Исправлено
+- `scripts/install.sh`: `P) Upgrade` молча завершается без обновления — `upgradable_pkgs()` возвращает ненулевой код выхода, когда последний пакет каталога не подлежит обновлению, и из-за `set -e` скрипт прекращается; добавлен явный `return 0`
 
 ## [0.19.1] - 2026-10-28
 
-### Fixed
-- `scripts/install.sh`: false `❌ install failed` on non-fatal opkg errors (e.g. `remove_obsolesced_files` for already-deleted files) — now detects `Configuring <pkg>` as success signal, shows `⚠️ installed with warnings` instead
-- `scripts/install.sh`: `P) Upgrade` was upgrading all system packages — now filtered to catalog packages only
+### Исправлено
+- `scripts/install.sh`: ложный `❌ install failed` при нефатальных ошибках opkg (например, `remove_obsolesced_files` для уже удалённых файлов) — теперь `Configuring <pkg>` считается признаком успеха, вместо этого показывается `⚠️ installed with warnings`
+- `scripts/install.sh`: `P) Upgrade` обновлял все системные пакеты — теперь только пакеты каталога
 
 ## [0.19.0] - 2026-10-28
 
-### Added
-- `scripts/install.sh`: package version & status display in interactive menu — shows feed version, installed version, upgrade arrows (`🔄 0.18.0 → 0.19.1`), new package indicator (`· 0.6.5 new`), and summary hint (`💡 2 update(s), 1 new`)
-- `scripts/install.sh`: `P) Upgrade N package(s)` menu option — one-key upgrade for all outdated packages (shown conditionally when updates available)
-- `scripts/install.sh`: batch-optimized version caching — 2 opkg calls + 1 file parse instead of 13 individual opkg calls; loading indicator
+### Добавлено
+- `scripts/install.sh`: версия и статус пакета в интерактивном меню — версия в фиде, установленная версия, стрелки обновления (`🔄 0.18.0 → 0.19.1`), признак нового пакета (`· 0.6.5 new`) и итоговая подсказка (`💡 2 update(s), 1 new`)
+- `scripts/install.sh`: пункт меню `P) Upgrade N package(s)` — обновление всех устаревших пакетов одной клавишей (показывается только когда есть обновления)
+- `scripts/install.sh`: кэширование версий пакетом — 2 вызова opkg + 1 разбор файла вместо 13 отдельных вызовов opkg; индикатор загрузки
 
-### Changed
-- `scripts/install.sh`: `show_summary()` — conditional counters, only non-zero stats shown (was: always showing `❌ 0 failed`)
+### Изменено
+- `scripts/install.sh`: `show_summary()` — условные счётчики, показывается только ненулевая статистика (было: всегда выводилось `❌ 0 failed`)
 
 ## [0.18.2] - 2026-09-27
 
-### Added
-- `lib/ip.sh`: `iface_is_up()` — sysfs operstate check for tunnel interface health (instant, ~1ms, no network I/O)
+### Добавлено
+- `lib/ip.sh`: `iface_is_up()` — проверка operstate через sysfs для состояния туннельного интерфейса (мгновенно, ~1 мс, без сетевого ввода-вывода)
 
 ## [0.18.1] - 2026-09-08
 
-### Changed
-- `lib/ip.sh`: `list_aggregate_cidrs()` uses `aggregate6` instead of ISC `aggregate`
-- `install.sh`: adds second opkg feed `aggr6` for aggregate6 dependency
+### Изменено
+- `lib/ip.sh`: `list_aggregate_cidrs()` использует `aggregate6` вместо ISC `aggregate`
+- `install.sh`: добавляет второй фид opkg `aggr6` для зависимости aggregate6
 
 ## [0.18.0] - 2026-08-29
 
-### Added
-- `scripts/install.sh` — `--uninstall` mode: removes all kee packages (reverse order) and opkg feed; interactive `U) Uninstall all packages` menu option
+### Добавлено
+- `scripts/install.sh` — режим `--uninstall`: удаляет все пакеты kee (в обратном порядке) и фид opkg; интерактивный пункт меню `U) Uninstall all packages`
 
-### Changed
-- `README.md` — rewritten: removed Project structure / Development / Subprojects sections; added per-package descriptions (accessible + technical); added Uninstall section with one-liner
+### Изменено
+- `README.md` — переписан: убраны разделы Project structure / Development / Subprojects; добавлены описания каждого пакета (доступное и техническое); добавлен раздел Uninstall с однострочной командой
 
 ## [0.17.0] - 2026-08-28
 
-### Added
-- `scripts/install.sh` — `--stable`/`--dev` CLI flags for channel selection; interactive `C) Change channel` option in package menu with `📡 Channel:` indicator; auto-detect existing channel from opkg.conf; default to `stable` for first-time install
-- `scripts/install.sh` — `upgraded` status label and `🔄 N upgraded` counter in summary (was: upgrades shown as "installed")
-- CI: `auto-tag.yml` — auto-creates git tags when `packaging/*/control` version changes on push to master, dispatches `release.yml` for each changed package
-- CI: `release.yml` — supports `workflow_dispatch` with `tag` input (for auto-tag triggering)
+### Добавлено
+- `scripts/install.sh` — флаги CLI `--stable`/`--dev` для выбора канала; интерактивный пункт `C) Change channel` в меню пакетов с индикатором `📡 Channel:`; автоопределение текущего канала из opkg.conf; по умолчанию `stable` при первой установке
+- `scripts/install.sh` — метка статуса `upgraded` и счётчик `🔄 N upgraded` в сводке (было: обновления показывались как «installed»)
+- CI: `auto-tag.yml` — сам создаёт git-теги, когда при push в master меняется версия в `packaging/*/control`, и запускает `release.yml` для каждого изменённого пакета
+- CI: `release.yml` — поддерживает `workflow_dispatch` со входным параметром `tag` (для запуска из auto-tag)
 
-### Fixed
-- `scripts/install.sh` — `update_index()` skipped `opkg update` after channel switch (index file was "fresh" from previous channel)
-- `scripts/generate-packages-index.sh` — non-standard shebang `#!/bin/bash` → `#!/opt/bin/sh`, removed `pipefail` bashism
+### Исправлено
+- `scripts/install.sh` — `update_index()` пропускал `opkg update` после смены канала (файл индекса был «свежим» от предыдущего канала)
+- `scripts/generate-packages-index.sh` — нестандартный shebang `#!/bin/bash` → `#!/opt/bin/sh`, удалён bashism `pipefail`
 
 ## [0.16.19] - 2026-08-28
 
-### Changed
-- Docs: installation instructions updated for opkg feed (`opkg install <pkg>` instead of `.ipk` filenames)
-- `releases/README.md`: opkg repo docs overhaul — channels table, feed name `kee`, switch/install/uninstall sections
-- `user-manual.ru.md`: installation section rewritten for opkg feed (was `.ipk` filenames)
-- `scripts/install.sh`: minor UI fixes (menu spacing, emoji alignment in summary)
+### Изменено
+- Документация: инструкции по установке обновлены под фид opkg (`opkg install <pkg>` вместо имён файлов `.ipk`)
+- `releases/README.md`: документация репозитория opkg переработана — таблица каналов, имя фида `kee`, разделы switch/install/uninstall
+- `user-manual.ru.md`: раздел установки переписан под фид opkg (было: имена файлов `.ipk`)
+- `scripts/install.sh`: мелкие правки интерфейса (отступы меню, выравнивание эмодзи в сводке)
 
 ## [0.16.18] - 2026-08-28
 
-### Fixed
-- `scripts/install.sh` — crash when running via `ssh host "curl ... | sh"` (no TTY): `/dev/tty` exists but not functional without `-t` flag, now properly detected with subshell open test
-- `scripts/install.sh` — prompt text leaked into `$choice` variable (printf to stdout captured by `$()` subshell), now outputs prompt to stderr
-- `scripts/install.sh` — menu descriptions misaligned (manual spacing), now uses `printf %-26s` for consistent column layout
-- `scripts/install.sh` — "up to date" packages were force-reinstalled unconditionally ("migrating to feed"), now correctly skipped
+### Исправлено
+- `scripts/install.sh` — падение при запуске через `ssh host "curl ... | sh"` (нет TTY): `/dev/tty` есть, но без флага `-t` не работает; теперь это определяется проверкой открытия в подоболочке
+- `scripts/install.sh` — текст приглашения попадал в переменную `$choice` (printf в stdout перехватывался подоболочкой `$()`), теперь приглашение пишется в stderr
+- `scripts/install.sh` — описания в меню съезжали (пробелы вручную), теперь колонки выравнивает `printf %-26s`
+- `scripts/install.sh` — пакеты «up to date» всегда принудительно переустанавливались («migrating to feed»), теперь они пропускаются
 
-### Changed
-- `scripts/install.sh` — refactored package catalog from 12 individual variables + case-based lookup to single `CATALOG` string with loop-based `pkg_name()`/`pkg_desc()` helpers
-- `scripts/install.sh` — `indent()` changed from `sed` to `while read` loop for line-buffered (real-time) output streaming over SSH
-- `scripts/install.sh` — validate user input in `parse_choice()`: reject non-numeric tokens before catalog lookup
-- `scripts/install.sh` — show menu with available packages even when no TTY, then die with usage hint
-- `scripts/install.sh` — interactive menu: added `F)` option for force reinstall of all packages (explicit `--force` for CLI)
+### Изменено
+- `scripts/install.sh` — каталог пакетов переведён с 12 отдельных переменных и поиска через case на одну строку `CATALOG` и хелперы `pkg_name()`/`pkg_desc()` в цикле
+- `scripts/install.sh` — `indent()` переведён с `sed` на цикл `while read`, чтобы вывод по SSH шёл построчно, в реальном времени
+- `scripts/install.sh` — проверка ввода в `parse_choice()`: нечисловые токены отклоняются до поиска в каталоге
+- `scripts/install.sh` — меню доступных пакетов показывается и без TTY, затем скрипт завершается с подсказкой по использованию
+- `scripts/install.sh` — в интерактивное меню добавлен пункт `F)` для принудительной переустановки всех пакетов (для CLI — явный `--force`)
 
-### Added
-- `scripts/install.sh` — bootstrap installer (`curl | sh`): auto-installs wget-ssl, configures opkg feed, interactive package menu, `--force` reinstall, `--all` mode, deploy.sh-style emoji output with summary
-- `scripts/generate-packages-index.sh` — opkg Packages index generator for self-hosted repo (dev script, not shipped in .ipk)
-- CI: `release.yml` auto-deploys .ipk to `dev/` channel on gh-pages after GitHub Release
-- CI: `promote.yml` workflow for manual dev→stable promotion
-- opkg repo: `gh-pages` orphan branch with `dev/` and `stable/` channels (7 packages, Packages + Packages.gz indexes)
+### Добавлено
+- `scripts/install.sh` — bootstrap-установщик (`curl | sh`): сам ставит wget-ssl, настраивает фид opkg, интерактивное меню пакетов, переустановка `--force`, режим `--all`, вывод с эмодзи в стиле deploy.sh и сводкой
+- `scripts/generate-packages-index.sh` — генератор индекса Packages для собственного репозитория opkg (скрипт разработки, в .ipk не входит)
+- CI: `release.yml` сам выкладывает .ipk в канал `dev/` на gh-pages после GitHub Release
+- CI: workflow `promote.yml` для ручного перевода dev→stable
+- репозиторий opkg: orphan-ветка `gh-pages` с каналами `dev/` и `stable/` (7 пакетов, индексы Packages и Packages.gz)
 
 ## [0.16.17] - 2026-08-22
 
-### Added
-- `lib/privacy.sh` — shared privacy filter: `priv_mask_ip_asn()` (IPv4 + ASN width-preserving masking), `priv_mask_ipv6()`, `priv_basic_filter()` pipeline. Preserves RFC 1918, loopback, and well-known DNS IPs. Used by `bug-report.sh` and `net-check --privacy`
-- `scripts/bug-report.sh`: privacy filter enabled by default — public IPs (#.#.#.#), ASN (AS****), IPv6 (#::#) are masked. Use `--no-privacy` for raw output. Removed old inline sed masking for ndnproxymain.conf
-- `scripts/build-ipk.sh`: `lib/privacy.sh` added to BASE_DATA
+### Добавлено
+- `lib/privacy.sh` — общий фильтр приватности: `priv_mask_ip_asn()` (маскирование IPv4 и ASN с сохранением ширины), `priv_mask_ipv6()`, конвейер `priv_basic_filter()`. Оставляет адреса RFC 1918, loopback и общеизвестные IP DNS. Используется в `bug-report.sh` и `net-check --privacy`
+- `scripts/bug-report.sh`: фильтр приватности включён по умолчанию — публичные IP (#.#.#.#), ASN (AS****) и IPv6 (#::#) маскируются. Сырой вывод — `--no-privacy`. Старое встроенное маскирование sed для ndnproxymain.conf удалено
+- `scripts/build-ipk.sh`: `lib/privacy.sh` добавлен в BASE_DATA
 
 ## [0.16.16] - 2026-08-16
 
-### Changed
-- README: fix `REDIRECT` → `DNAT` in smartdns-redirect description, update `webui/lua/` file listing
-- `scripts/check-privacy.sh`: exclude `CHANGELOG.md` from scan (historical records); add `KNOWN_FP` filter for conffile names (`ru-whitelist`) and functional domains (`rkn.gov.ru`)
+### Изменено
+- README: в описании smartdns-redirect `REDIRECT` исправлен на `DNAT`, обновлён список файлов `webui/lua/`
+- `scripts/check-privacy.sh`: `CHANGELOG.md` исключён из сканирования (исторические записи); добавлен фильтр `KNOWN_FP` для имён conffile (`ru-whitelist`) и функциональных доменов (`rkn.gov.ru`)
 
 ## [0.16.15] - 2026-07-30
 
-### Changed
-- `lib/status.sh`: colored status marks (✓/✗/⚠), bold section headers; new `status_setup_colors()` with TTY-aware auto-detection
-- `lib/status.sh`: `_status_parse_color_arg()` — `--color`/`--no-color` flag support for all status scripts
-- `scripts/kee-status.sh`: passes `--color` to sub-scripts in `--details` mode for colored sub-output
+### Изменено
+- `lib/status.sh`: цветные отметки статуса (✓/✗/⚠), жирные заголовки разделов; новая `status_setup_colors()` с автоопределением по TTY
+- `lib/status.sh`: `_status_parse_color_arg()` — флаги `--color`/`--no-color` для всех скриптов статуса
+- `scripts/kee-status.sh`: в режиме `--details` передаёт `--color` во вложенные скрипты, чтобы их вывод был цветным
 
 ## [0.16.14] - 2026-07-28
 
-### Fixed
-- `lib/lists.sh`: `list_count()` — missing `local` on `_cnt` var caused global namespace leak
-- `lib/ip.sh`: `is_ipv4()` now validates each octet is 0–255 (previously `999.999.999.999` was accepted); `is_cidr()` reuses `is_ipv4()` for host-part validation
-- `lib/ip.sh`: `detect_out_iface()` refactored to use `is_tunnel_iface()` via `_first_non_tunnel_default_iface()` helper — previously `sit*`, `gre*`, `vti*`, `ip6tnl*`, `xfrm*` were not excluded
+### Исправлено
+- `lib/lists.sh`: `list_count()` — у переменной `_cnt` не было `local`, из-за этого она утекала в глобальное пространство имён
+- `lib/ip.sh`: `is_ipv4()` теперь проверяет, что каждый октет в диапазоне 0–255 (раньше принималось `999.999.999.999`); `is_cidr()` проверяет хостовую часть через `is_ipv4()`
+- `lib/ip.sh`: `detect_out_iface()` переведена на `is_tunnel_iface()` через хелпер `_first_non_tunnel_default_iface()` — раньше не исключались `sit*`, `gre*`, `vti*`, `ip6tnl*`, `xfrm*`
 
-### Changed
-- `lib/common.sh`: `log()` / `log_error()` use `${0##*/}` / `${tag%.sh}` instead of `$(basename "$0" .sh)` — eliminates subshell fork per log call
-- `lib/common.sh`: `format_age()` uses `printf '%s\n'` (was `echo`) — consistent with rest of file
-- `tests/run-all.sh`: non-executable test files now emit `SKIP` warning instead of silently skipping
+### Изменено
+- `lib/common.sh`: `log()` / `log_error()` используют `${0##*/}` / `${tag%.sh}` вместо `$(basename "$0" .sh)` — больше нет fork подоболочки на каждый вызов лога
+- `lib/common.sh`: `format_age()` использует `printf '%s\n'` (было `echo`) — как и остальной файл
+- `tests/run-all.sh`: тестовые файлы без права на выполнение теперь дают предупреждение `SKIP`, а не пропускаются молча
 
-### Tests
-- `tests/test-lib-ip.sh`: `is_ipv4` octet-range tests; `cidr_sample_ips /30` case
-- `tests/test-lib-common.sh`: `json_escape_val` tab escape; `json_kv_bool` no-arg default
-- `tests/test-lib-lists.sh`: `list_read` / `list_count` failure on missing file
+### Тесты
+- `tests/test-lib-ip.sh`: тесты диапазона октетов `is_ipv4`; случай `cidr_sample_ips /30`
+- `tests/test-lib-common.sh`: экранирование табуляции в `json_escape_val`; значение `json_kv_bool` по умолчанию без аргумента
+- `tests/test-lib-lists.sh`: сбой `list_read` / `list_count` при отсутствии файла
 
 ## [0.16.13] - 2026-07-28
 
-### Changed
-- `scripts/bug-report.sh`: rewritten diagnostic collection
+### Изменено
+- `scripts/bug-report.sh`: сбор диагностики переписан
 
 ## [0.16.12] - 2026-07-27
 
-### Fixed
-- `lib/status.sh`: `status_check_port()` — normalize IPv6 listen addresses from
-  netstat to RFC 3986 `[addr]:port` format. Previously raw netstat output like
-  `fdce:...:d24c:6053` was ambiguous (port indistinguishable from last IPv6 group).
-  Now displays `[fdce:...:d24c]:6053`. Fixes display in smartdns-redirect
-  "Upstream probe", smartdns-geo-conf "Ports", and webui status JSON.
-  Sort: IPv4 (LAN, loopback) → IPv6 (LAN, loopback).
+### Исправлено
+- `lib/status.sh`: `status_check_port()` — адреса прослушивания IPv6 из
+  netstat приводятся к формату RFC 3986 `[addr]:port`. Раньше сырой вывод netstat вроде
+  `fdce:...:d24c:6053` был неоднозначен (порт нельзя отличить от последней группы IPv6).
+  Теперь показывается `[fdce:...:d24c]:6053`. Исправлен вывод в smartdns-redirect
+  «Upstream probe», smartdns-geo-conf «Ports» и в JSON статуса webui.
+  Сортировка: IPv4 (LAN, loopback) → IPv6 (LAN, loopback).
 
-### Changed
-- `lib/geo.sh`, `lib/ip.sh`, `lib/common.sh`: legal terminology
+### Изменено
+- `lib/geo.sh`, `lib/ip.sh`, `lib/common.sh`: юридическая терминология
 
 ## [0.16.10] - 2026-07-27
 
-### Added
-- `lib/common.sh`: `detect_router_ip6()` — detect global-scope IPv6 address on
-  br0 bridge (used by smartdns-redirect for automatic IPv6 DNS DNAT)
+### Добавлено
+- `lib/common.sh`: `detect_router_ip6()` — определяет IPv6-адрес глобальной области на
+  мосту br0 (smartdns-redirect использует его для автоматического DNAT DNS по IPv6)
 
 ## [0.16.8] - 2026-07-12
 
-### Added
-- `kee-status.sh`: package versions shown in summary mode (without `--details`) —
-  dim `vX.Y.Z` suffix after Alive/FAIL label
+### Добавлено
+- `kee-status.sh`: в режиме сводки (без `--details`) показываются версии пакетов —
+  приглушённый суффикс `vX.Y.Z` после метки Alive/FAIL
 
 ## [0.16.7] - 2026-07-11
 
-### Added
-- `lib/ip.sh`: `cidr_overlap_routes()` — finds routes in a routing table that overlap
-  with a given CIDR (moved from `geo-split/scripts/route-check.sh` for reuse)
+### Добавлено
+- `lib/ip.sh`: `cidr_overlap_routes()` — ищет в таблице маршрутизации маршруты, которые пересекаются
+  с заданным CIDR (перенесено из `geo-split/scripts/route-check.sh` для повторного использования)
 
 ## [0.16.6] - 2026-07-11
 
-### Fixed
-- `bug-report.sh`: reachability test false positive when tunnel is default route —
-  `ping -I <dev>` (SO_BINDTODEVICE) conflicts with routing when default goes to
-  a different interface. Now uses `ping -I <src_ip>` to leverage policy routing rules.
-  Both ICMP and HTTP probes are run for richer diagnostics (ping OK/FAIL + HTTP status code).
+### Исправлено
+- `bug-report.sh`: ложное срабатывание теста доступности, когда туннель является маршрутом по умолчанию —
+  `ping -I <dev>` (SO_BINDTODEVICE) конфликтует с маршрутизацией, если default уходит
+  на другой интерфейс. Теперь используется `ping -I <src_ip>`, чтобы сработали правила policy routing.
+  Для более полной диагностики идут и ICMP-, и HTTP-пробы (ping OK/FAIL и код статуса HTTP).
 
 ## [0.16.5] - 2026-06-29
 
-### Added
-- `lib/common.sh`: `get_ms()` millisecond timer, `json_kv`/`json_kv_bool` helpers
-- `lib/ip.sh`: `is_tunnel_iface()` tunnel interface detection
+### Добавлено
+- `lib/common.sh`: миллисекундный таймер `get_ms()`, хелперы `json_kv`/`json_kv_bool`
+- `lib/ip.sh`: `is_tunnel_iface()` — определение туннельного интерфейса
 
 ## [0.16.4] - 2026-06-18
 
-### Changed
-- `lib/ip.sh`: `fill_routes_batch()` stamp files now store interface name
-  (enables fast dev-mismatch detection by geo-split NDM hook without ip route fork)
+### Изменено
+- `lib/ip.sh`: stamp-файлы `fill_routes_batch()` теперь хранят имя интерфейса
+  (хук NDM geo-split быстро видит несовпадение dev без fork `ip route`)
 
 ## [0.16.3] - 2026-06-15
 
-### Changed
-- `lib/status.sh`: add declarative text output API (accumulator + emit pattern):
+### Изменено
+- `lib/status.sh`: декларативный API текстового вывода (паттерн «аккумулятор + emit»):
   `status_line`, `status_line_cont`, `status_section`, `status_blank`,
-  `status_emit_text`. Refactored `status_show_*` helpers to use accumulator.
-  Parallel to existing JSON accumulation API.
+  `status_emit_text`. Хелперы `status_show_*` переведены на аккумулятор.
+  Параллельно уже существующему API накопления JSON.
 
 ## [0.16.2] - 2026-06-15
 
-### Changed
-- `lib/status.sh`: add declarative JSON accumulation API (`status_detail`,
-  `status_check_result`, `status_extra`, `status_emit_json`) — eliminates manual
-  printf/json_kv boilerplate in status scripts.
+### Изменено
+- `lib/status.sh`: декларативный API накопления JSON (`status_detail`,
+  `status_check_result`, `status_extra`, `status_emit_json`) — в скриптах статуса больше не нужен ручной
+  шаблон printf/json_kv.
 
 ## [0.16.1] - 2026-06-13
 
-### Fixed
-- `scripts/bug-report.sh`: MTU check no longer crashes script on routers with
-  non-tunnel interfaces having MTU >= 1500 (set -e + `&&` chain in while pipeline).
-  Now shows only tunnel MTU (informational, no ⚠ — reduced MTU is expected).
+### Исправлено
+- `scripts/bug-report.sh`: проверка MTU больше не роняет скрипт на роутерах, где
+  у нетуннельных интерфейсов MTU >= 1500 (`set -e` и цепочка `&&` в конвейере while).
+  Теперь показывается только MTU туннеля (справка, без ⚠ — уменьшенный MTU ожидаем).
 
 ## [0.16.0] - 2026-06-13
 
-### Fixed
-- `lib/ip.sh`: `detect_out_iface()` now excludes `awg*` (AmneziaWG) from ISP auto-detection.
-  Previously, if awg0 was the default route, it would be incorrectly returned as ISP interface.
-- `scripts/bug-report.sh`: DNS `+nocookie` fix — Keenetic ndnproxy doesn't support
-  EDNS COOKIE, caused empty "System resolver" output on all routers.
+### Исправлено
+- `lib/ip.sh`: `detect_out_iface()` больше не принимает `awg*` (AmneziaWG) за интерфейс ISP.
+  Раньше, если awg0 был маршрутом по умолчанию, он ошибочно возвращался как интерфейс ISP.
+- `scripts/bug-report.sh`: исправление DNS `+nocookie` — ndnproxy Keenetic не поддерживает
+  EDNS COOKIE, из-за этого на всех роутерах вывод «System resolver» был пустым.
 
-### Added
-- `scripts/bug-report.sh`: routing effectiveness diagnostic — detects when geo-split
-  is ineffective (routes to same interface as default + no Keenetic tunnel policy).
-- `scripts/bug-report.sh`: edge-case diagnostics — IPv6 leak, full ip rule show,
-  interface MTU, rp_filter, POSTROUTING NAT, ROUTE_OUT health check, crond status.
-- `scripts/bug-report.sh`: Keenetic policy rules display (fwmark prio 100+).
-- `scripts/bug-report.sh`: **client-path verification** section — simulates traffic
-  from LAN client (`ip route get ... from <LAN> iif br0`) to prove policy routing works;
-  split-routing verdict (GEO vs non-GEO interface comparison), ping through ROUTE_OUT,
-  NAT/MASQUERADE detection for client traffic.
+### Добавлено
+- `scripts/bug-report.sh`: диагностика эффективности маршрутизации — видно, когда geo-split
+  не работает (маршруты на тот же интерфейс, что и default, и нет политики туннеля Keenetic).
+- `scripts/bug-report.sh`: диагностика краевых случаев — утечка IPv6, полный `ip rule show`,
+  MTU интерфейса, rp_filter, POSTROUTING NAT, проверка ROUTE_OUT, статус crond.
+- `scripts/bug-report.sh`: показ правил политик Keenetic (fwmark, prio 100+).
+- `scripts/bug-report.sh`: раздел **проверки пути клиента** — имитирует трафик
+  от клиента LAN (`ip route get ... from <LAN> iif br0`), чтобы подтвердить policy routing;
+  вердикт split-routing (сравнение интерфейсов GEO и не-GEO), ping через ROUTE_OUT,
+  обнаружение NAT/MASQUERADE для клиентского трафика.
 
-### Changed
-- `scripts/bug-report.sh`: removed all hardcoded RU zone references (ya.ru, 77.88.8.8).
-  Test targets now picked dynamically from user's `domains-resolved.txt` cache and live
-  route tables. Non-GEO target (`1.1.1.1`) verified against tables before use.
-  DNS/HTTP/routing checks now reflect the user's actual configured geo-zone.
+### Изменено
+- `scripts/bug-report.sh`: убраны все захардкоженные ссылки на зону RU (ya.ru, 77.88.8.8).
+  Цели тестов теперь берутся из кэша пользователя `domains-resolved.txt` и живых
+  таблиц маршрутов. Цель не-GEO (`1.1.1.1`) перед использованием сверяется с таблицами.
+  Проверки DNS, HTTP и маршрутизации отражают фактически настроенную геозону.
 
 ## [0.15.0] - 2026-06-10
 
-### Added
-- `lib/zones.sh`: full ISO 3166-1 alpha-2 zone labels (249 countries/territories).
-  Replaces deleted per-zone config files. Used by webui zone selector dropdown.
+### Добавлено
+- `lib/zones.sh`: полные подписи зон ISO 3166-1 alpha-2 (249 стран и территорий).
+  Вместо удалённых конфигов отдельных зон. Нужны выпадающему списку зон в webui.
 
 ## [0.14.0] - 2026-06-08
 
-### Added
-- `lib/geo.sh`: 15+ new unions — FATF, AIIB, NDB, OPEC/OPEC+ (split), offshore,
-  SWIFT-disconnected, Commonwealth, Francophonie, Lusophone, Global South,
-  Mediterranean, Greater China, East Asia+ASEAN, CELAC, US/EU-sanctioned, internet_restricted
-- `lib/geo.sh`: new "🚫 Sanctions & restrictions" section (us_sanctioned,
+### Добавлено
+- `lib/geo.sh`: 15+ новых союзов — FATF, AIIB, NDB, OPEC/OPEC+ (раздельно), офшоры,
+  отключённые от SWIFT, Содружество, Франкофония, лузофоны, Глобальный Юг,
+  Средиземноморье, Большой Китай, Восточная Азия+АСЕАН, CELAC, под санкциями США/ЕС, internet_restricted
+- `lib/geo.sh`: новый раздел «🚫 Sanctions & restrictions» (us_sanctioned,
   eu_sanctioned, swift_cut, internet_restricted)
 
-### Changed
-- `lib/geo.sh`: UTF emoji icons added to every union comment (displayed as labels
-  in WebUI union selector)
-- `lib/geo.sh`: OPEC split into core OPEC (13 members) and OPEC+ (with allies)
+### Изменено
+- `lib/geo.sh`: в комментарий каждого союза добавлены значки UTF-эмодзи (в селекторе
+  союзов WebUI они показываются как подписи)
+- `lib/geo.sh`: OPEC разделён на ядро OPEC (13 членов) и OPEC+ (с союзниками)
 
 ## [0.13.0] - 2026-06-07
 
-### Added
-- `lib/geo.sh` — shared geo-zone library (40+ unions, `resolve_geo_zone()`)
-- Multi-zone GeoIP support in geo-split (GEO_ZONE config, all 240 countries)
-- Shared `/api/system/zones` endpoint for webui zone selection
+### Добавлено
+- `lib/geo.sh` — общая библиотека геозон (40+ союзов, `resolve_geo_zone()`)
+- несколько зон GeoIP в geo-split (конфиг GEO_ZONE, все 240 стран)
+- общий endpoint `/api/system/zones` для выбора зоны в webui
 
-### Changed
-- Removed `smartdns-geo-conf/config/unions.conf` → data moved to `lib/geo.sh`
+### Изменено
+- Удалён `smartdns-geo-conf/config/unions.conf` → данные перенесены в `lib/geo.sh`
 
 ## [0.12.1] - 2026-06-02
 
-### Fixed
-- Package: `scripts/bug-report.sh` included in .ipk data (was missing)
+### Исправлено
+- Пакет: `scripts/bug-report.sh` включён в данные .ipk (раньше его не было)
 
 ## [0.12.0] - 2026-06-01
 
-### Improved
-- `scripts/bug-report.sh` — major diagnostic enhancement:
-  - New section: service enabled/disabled state (symlink detection)
-  - New section: user config.conf existence per package
-  - New section: geo-split effective config (ROUTE_OUT, ROUTE_GW, ROUTE_IN, tables)
-  - New section: tunnel interfaces list (nwg/awg/ovpn/tun/tap)
-  - Routes section: ISP auto-detection via `detect_out_iface()` + `detect_gateway()`
-  - Routes section: shows route type (via gateway vs scope-link) for both tables
-  - WebUI upstream (stock httpd) reachability probe in connectivity section
-  - Added `coreutils-touch` to opkg package grep
-  - Added `watchdog` to logread filter
-  - Added `/proc/net/fib_triestat` availability indicator
-  - Increased logread tail from 15 to 20 lines
+### Улучшено
+- `scripts/bug-report.sh` — диагностика заметно расширена:
+  - Новый раздел: сервис включён или выключен (по symlink)
+  - Новый раздел: есть ли config.conf пользователя у каждого пакета
+  - Новый раздел: эффективный конфиг geo-split (ROUTE_OUT, ROUTE_GW, ROUTE_IN, таблицы)
+  - Новый раздел: список туннельных интерфейсов (nwg/awg/ovpn/tun/tap)
+  - Раздел маршрутов: автоопределение ISP через `detect_out_iface()` и `detect_gateway()`
+  - Раздел маршрутов: тип маршрута (via gateway или scope-link) для обеих таблиц
+  - Проба доступности upstream WebUI (штатный httpd) в разделе связности
+  - В выборку пакетов opkg добавлен `coreutils-touch`
+  - В фильтр logread добавлен `watchdog`
+  - Индикатор доступности `/proc/net/fib_triestat`
+  - Хвост logread увеличен с 15 до 20 строк
 
 ## [0.11.1] - 2026-06-01
 
-### Changed
-- `kee-status.sh`: parse status word from sub-script first line instead of
-  fragile grep/exit-code heuristic; added echo separator between packages in `-d`
+### Изменено
+- `kee-status.sh`: слово статуса берётся из первой строки вложенного скрипта, а не
+  из хрупкой эвристики grep и кода выхода; в `-d` между пакетами добавлен разделитель echo
 
 ## [0.11.0] - 2026-06-01
 
-### Added
-- `lib/common.sh`: `is_service_enabled()` — checks if init.d symlink exists
-  (used by hooks/cron to respect user disable)
-- `scripts/kee-status.sh`: "Disabled" status in yellow for services with
-  removed init.d symlink
+### Добавлено
+- `lib/common.sh`: `is_service_enabled()` — проверяет, есть ли symlink в init.d
+  (хуки и cron учитывают отключение пользователем)
+- `scripts/kee-status.sh`: жёлтый статус «Disabled» для сервисов с
+  удалённым symlink init.d
 
 ## [0.10.0] - 2026-05-31
 
-### Added
-- `lib/ip.sh`: new `detect_gateway()` — auto-detects nexthop IP for ISP interface
-  (main table first, fallback to Keenetic policy tables 4096+)
-- `lib/ip.sh`: new `resolve_target_gateway()` — resolves ROUTE_GW config
-  (auto/none/<ip>) for policy routing setup
+### Добавлено
+- `lib/ip.sh`: новая `detect_gateway()` — сама определяет IP nexthop для интерфейса ISP
+  (сначала main table, иначе таблицы политик Keenetic 4096+)
+- `lib/ip.sh`: новая `resolve_target_gateway()` — разбирает конфиг ROUTE_GW
+  (auto/none/<ip>) для настройки policy routing
 
-### Changed
-- `lib/ip.sh`: `fill_routes_batch()` accepts optional `$5` gateway arg;
-  adds `via <gateway>` to routes when ISP interface has a nexthop —
-  fixes Ethernet ISP compatibility (previously all routes were scope-link)
+### Изменено
+- `lib/ip.sh`: `fill_routes_batch()` принимает необязательный аргумент `$5` — шлюз;
+  добавляет `via <gateway>`, если у интерфейса ISP есть nexthop —
+  так маршруты работают с Ethernet ISP (раньше все были scope-link)
 
 ## [0.9.5] - 2026-05-29
 
-### Added
-- `scripts/bug-report.sh` — one-command diagnostics collector for forum bug reports;
-  gathers firmware version, package versions, all service statuses (via `kee-status -d`),
-  DNS checks, route/rule state, and log tails
+### Добавлено
+- `scripts/bug-report.sh` — сбор диагностики одной командой для баг-репортов на форуме;
+  собирает версию прошивки, версии пакетов, статусы всех сервисов (через `kee-status -d`),
+  проверки DNS, состояние маршрутов и правил, хвосты логов
 
 ## [0.9.4] - 2026-05-26
 
-### Fixed
-- `lib/ip.sh` — `detect_out_iface()` now checks main table default route first;
-  fixes incorrect ISP detection on multi-WAN routers where backup ISP (e.g. LTE
-  in Keenetic table 16384) appeared before active WISP in `ip route show table all`
+### Исправлено
+- `lib/ip.sh` — `detect_out_iface()` сначала смотрит маршрут по умолчанию в main table;
+  на роутерах с несколькими WAN резервный ISP (например, LTE
+  в таблице Keenetic 16384) больше не определяется вместо активного WISP из `ip route show table all`
 
 ## [0.9.3] - 2026-05-15
 
-### Fixed
-- `lib/status.sh` — uptime calculation now uses monotonic clock (`/proc/<pid>/stat`
-  field 22) instead of `stat -t` wall-clock timestamps; fixes wrong uptime on routers
-  with bad RTC battery (clock skew after NTP sync)
-- `lib/common.sh` — `update_pid_file()` now stores boot-relative uptime (line 2)
-  for clock-skew-immune marker file age calculation
+### Исправлено
+- `lib/status.sh` — uptime считается по монотонным часам (поле 22 в `/proc/<pid>/stat`),
+  а не по меткам wall-clock из `stat -t`; на роутерах с севшей батарейкой RTC
+  uptime больше не врёт после сдвига часов при синхронизации NTP
+- `lib/common.sh` — `update_pid_file()` пишет uptime от загрузки (строка 2),
+  чтобы возраст файла-маркера не зависел от сдвига часов
 
-### Changed
-- `postinst` ensures `/opt/tmp` directory exists (runtime data moved from `/tmp`)
+### Изменено
+- `postinst` создаёт каталог `/opt/tmp`, если его нет (данные времени выполнения перенесены из `/tmp`)
 
 ## [0.9.2] - 2026-05-12
 
-### Added
-- `kee-status` aggregated diagnostic command (`/opt/bin/kee-status`)
-- `lib/status.sh` shared check/show functions for service diagnostics
+### Добавлено
+- агрегированная диагностическая команда `kee-status` (`/opt/bin/kee-status`)
+- `lib/status.sh` — общие функции check/show для диагностики сервисов
 
-### Changed
-- `lib/ip.sh` — improved CIDR aggregation and ISP interface detection
-- `lib/common.sh` — enhanced router IP detection logic
+### Изменено
+- `lib/ip.sh` — улучшены агрегация CIDR и определение интерфейса ISP
+- `lib/common.sh` — улучшена логика определения IP роутера

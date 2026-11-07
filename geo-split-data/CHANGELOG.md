@@ -1,47 +1,47 @@
-# Changelog
+# Журнал изменений
 
-All notable changes to `geo-split-data` are documented here.
+Все заметные изменения `geo-split-data` описаны здесь.
 
-Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/)
-Versioning: [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html)
+Формат: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/)
+Версионирование: [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html)
 
 ## [0.7.0] - 2026-09-08
 
-### Changed
-- `fetch-zones.sh`: switched from ISC `aggregate` to `aggregate6` for CIDR aggregation
+### Изменено
+- `fetch-zones.sh`: переход с ISC `aggregate` на `aggregate6` для агрегации CIDR
 
 ## [0.6.2] - 2026-08-28
 
-### Changed
-- Docs: installation instructions updated for opkg feed — `opkg install geo-split-data` instead of `.ipk` filenames
+### Изменено
+- Документация: инструкции по установке обновлены под фид opkg — `opkg install geo-split-data` вместо имён файлов `.ipk`
 
 ## [0.6.1] - 2026-08-16
 
-### Changed
-- Legal terminology compliance: updated naming — allowlist, гео-ограничение — in README, user manual, domains.txt, ru-whitelist.txt comments
-- Removed regulator reference from domains.txt
+### Изменено
+- Соответствие юридической терминологии: обновлены названия — allowlist, гео-ограничение — в README, руководстве пользователя, комментариях domains.txt и ru-whitelist.txt
+- Из domains.txt убрана ссылка на регулятора
 
 ## [0.6.0] - 2026-07-06
 
-### Changed
-- **Zone files stored as .gz**: all `lists/geoip/*.zone` files are now gzip-compressed
-  (`.zone.gz`). Saves ~60-70% flash space on routers (232 zones: ~3.5MB → ~1.2MB).
-  `fetch-zones.sh` compresses with `gzip -9` at build time.
+### Изменено
+- **Файлы зон хранятся как .gz**: все файлы `lists/geoip/*.zone` теперь сжаты gzip
+  (`.zone.gz`). Экономия ~60–70% места во flash на роутерах (232 зоны: ~3.5MB → ~1.2MB).
+  `fetch-zones.sh` сжимает с `gzip -9` на этапе сборки.
 
 ## [0.5.0] - 2026-06-07
 
-### Added
-- All 234 GeoIP country zones in fetch-zones.sh (was 5 EAEU only)
-- Full ISO 3166-1 alpha-2 coverage for ipdeny.com data
+### Добавлено
+- Все 234 зоны стран GeoIP в fetch-zones.sh (раньше только 5 стран ЕАЭС)
+- Полное покрытие ISO 3166-1 alpha-2 для данных ipdeny.com
 
-### Changed
-- `COUNTRIES` array expanded from 5 (EAEU) to ~240 (all available zones)
+### Изменено
+- Массив `COUNTRIES` расширен с 5 (ЕАЭС) до ~240 (все доступные зоны)
 
 ## [0.4.0] - 2026-05-12
 
-### Added
-- `ru-whitelist.txt` for manually curated Russian domains
-- README included in .ipk package
+### Добавлено
+- `ru-whitelist.txt` для вручную отобранных российских доменов
+- README включён в пакет .ipk
 
-### Changed
-- `domains.txt` marked as conffile (preserved on opkg upgrade)
+### Изменено
+- `domains.txt` помечен как conffile (сохраняется при `opkg upgrade`)

@@ -23,6 +23,25 @@
 
 Этот пакет **обязателен** для работы всех остальных модулей проекта (geo-split, smartdns-geo-conf, smartdns-redirect, webui). Устанавливается первым.
 
+### Пакеты opkg и этот репозиторий
+
+Готовые `.ipk` ставит фид автора оригинала:
+
+```sh
+src/gz kee https://0xkee.github.io/keenetic-entware-extras/stable
+```
+
+Скрипт `https://raw.githubusercontent.com/0xkee/keenetic-entware-extras/master/scripts/install.sh` берёт пакеты оттуда же. В этих пакетах нет файлов этого форка:
+
+- русский экран сценария в webui;
+- проверка туннеля `geo-split/scripts/tunnel-check.sh` и `GET /api/geo-split/tunnel-check`;
+- лестница соединений `geo-split/scripts/ladder.sh` и `GET /api/geo-split/ladder`;
+- сторож зарубежного DNS `smartdns-geo-conf/scripts/dns-tunnel-watch.sh`.
+
+`opkg upgrade` пакетов `webui`, `geo-split` и `smartdns-geo-conf` заменяет эти файлы версией из фида. `config.conf` объявлен conffile, opkg его не затирает. Статика, Lua и скрипты — не conffile.
+
+Файлы из этого дерева кладутся в `/opt/keenetic-entware-extras/`. У nginx включён `gzip_static`: рядом со статикой webui нужен свежий `.gz`. Новый адрес API начинает отвечать после перезапуска `S80nginx-webui`.
+
 ---
 
 ## Требования
@@ -145,7 +164,7 @@ keenetic-entware-extras status:
 
 Также поддерживается переменная окружения `NO_COLOR=1`.
 
-### Exit code
+### Код возврата
 
 | Код | Значение |
 |-----|----------|
@@ -230,6 +249,14 @@ opkg update && opkg upgrade
 ```
 
 Библиотеки обновляются на месте. Все модули продолжают использовать обновлённые версии `lib/*.sh` автоматически.
+
+`opkg upgrade` не сохраняет файлы этого форка: экран сценария, `tunnel-check`, `ladder.sh` и `dns-tunnel-watch.sh`. Конфиги `config.conf` и `defaults.conf` остаются. Вернуть форк одной командой с компьютера, где лежит этот репозиторий:
+
+```sh
+KEE_PASS_FILE=/путь/к/файлу-с-паролем ./scripts/reapply-fork.sh
+```
+
+Файл пароля — одна строка, пароль root-шелла. Скрипт его не печатает. `--dry-run` показывает список и ничего не отправляет. Команда копирует отличия от `upstream/master`, кроме `config.conf` и `defaults.conf`, заново собирает `.gz` для статики и перезапускает панель и SmartDNS. Службу geo-split она не перезапускает. По умолчанию хост `root@192.168.42.1`, порт `222`. Другие значения задаются `KEE_HOST` и `KEE_PORT`.
 
 ---
 

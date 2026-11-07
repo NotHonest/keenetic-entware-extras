@@ -53,6 +53,20 @@ _get_isp_dns_ips() {
   printf '%s' "$_ips"
 }
 
+# Tunnel device names. Same set as dns-tunnel-watch.sh and lib/ip.sh.
+is_tunnel_dev() {
+  case "$1" in
+    nwg*|awg*|wg[0-9]*|ovpn*|tun[0-9]*|tap*|sstp*|l2tp*|pptp*|ipsec*|gre*|vti*)
+      return 0
+      ;;
+  esac
+  return 1
+}
+
+default_route_dev() {
+  ip route show default 2>/dev/null | awk 'NR==1 { for (i = 1; i <= NF; i++) if ($i == "dev") { print $(i + 1); exit } }'
+}
+
 # ===================================================================
 # Generate: international (other) DNS servers — default group
 # ===================================================================
@@ -66,13 +80,34 @@ generate_other_servers() {
 
 HEADER
 
-  # Set by dns-tunnel-watch.sh after the VPN misses two probes. Cleared after
-  # two successful probes. Direct servers are not kept in parallel: SmartDNS
-  # would race them against the tunnel and could accept a poisoned answer.
+  # dns-tunnel-watch.sh sets the stamp when international DNS must leave the
+  # tunnel, and writes one iface name when it must follow the live default.
+  # One iface only: a second server in parallel would let the faster answer win.
+  # SmartDNS 46 has no -fallback.
   local force_direct=0
+  local iface_list=""
+  local runtime_iface=""
+  local route_dev=""
   if [ -f /opt/var/run/smartdns-force-direct ]; then
     force_direct=1
-    printf '# Tunnel unreachable: international DNS goes direct until it returns.\n\n' >> "$out"
+    printf '# Tunnel unreachable: international DNS goes direct until a VPN is the default route again.\n\n' >> "$out"
+  elif [ -n "${OTHER_DNS_INTERFACES:-}" ]; then
+    if [ -f /opt/var/run/smartdns-dns-iface ]; then
+      IFS= read -r runtime_iface < /opt/var/run/smartdns-dns-iface || runtime_iface=""
+    fi
+    if is_tunnel_dev "$runtime_iface"; then
+      iface_list="$runtime_iface"
+    else
+      route_dev="$(default_route_dev)"
+      if is_tunnel_dev "$route_dev"; then
+        iface_list="$route_dev"
+      else
+        iface_list="$OTHER_DNS_INTERFACES"
+      fi
+    fi
+    if [ -n "$iface_list" ]; then
+      printf '# International DNS via %s\n\n' "$iface_list" >> "$out"
+    fi
   fi
 
   for provider in $OTHER_DNS_PROVIDER; do
@@ -100,12 +135,6 @@ HEADER
     ip2="$(get_other_prov "$provider" IP2)"
     tls_host="$(get_other_prov "$provider" TLS_HOST)"
     doh_url="$(get_other_prov "$provider" DOH_URL)" 2>/dev/null || doh_url=""
-
-    # Determine interface flags
-    local iface_list=""
-    if [ -n "$OTHER_DNS_INTERFACES" ] && [ "$force_direct" != 1 ]; then
-      iface_list="$OTHER_DNS_INTERFACES"
-    fi
 
     case "$proto" in
       doh)

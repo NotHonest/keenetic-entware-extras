@@ -1,31 +1,31 @@
 # geo-split-data
 
-> 📖 **[User Manual (RU)](docs/user-manual.ru.md)**
+> 📖 **[Руководство пользователя](docs/user-manual.ru.md)**
 
-GeoIP subnet data and domain lists for [geo-split](../geo-split/).
+Подсети GeoIP и списки доменов для [geo-split](../geo-split/).
 
-## Contents
+## Состав
 
-| Path | Description |
+| Путь | Описание |
 |------|-------------|
-| `lists/domains.txt` | Curated domain list (conffile — opkg won't overwrite) |
-| `lists/ru-whitelist.txt` | RU allowlist: 100+ domains (government services, banks, streaming, etc.) |
-| `lists/geoip/*.zone.gz` | Pre-built gzip-compressed country IP subnets (232 zones from [ipdeny.com](https://www.ipdeny.com)) |
-| `scripts/fetch-zones.sh` | Download & aggregate zone files (build-time script) |
+| `lists/domains.txt` | Подобранный список доменов (conffile — opkg не перезапишет) |
+| `lists/ru-whitelist.txt` | Приоритетный список RU: 100+ доменов (госуслуги, банки, стриминг и т. д.) |
+| `lists/geoip/*.zone.gz` | Готовые сжатые gzip подсети IP стран (232 зоны с [ipdeny.com](https://www.ipdeny.com)) |
+| `scripts/fetch-zones.sh` | Загрузка и агрегация файлов зон (скрипт этапа сборки) |
 
-## Installation
+## Установка
 
-Requires [opkg repository](../releases/README.md) configured.
+Нужен настроенный [репозиторий opkg](../releases/README.md).
 
 ```sh
 opkg install geo-split-data
 ```
 
-> **conffiles:** `lists/domains.txt` and `lists/ru-whitelist.txt` are declared as conffiles —
-> user changes are **not overwritten** during `opkg upgrade`.
-> opkg will keep your version and create the `.ipk` version alongside with `.opkg-new` suffix.
+> **conffiles:** `lists/domains.txt` и `lists/ru-whitelist.txt` объявлены как conffiles —
+> правки пользователя **не перезаписываются** при `opkg upgrade`.
+> opkg оставит вашу версию и положит версию из пакета рядом, с суффиксом `.opkg-new`.
 
-## Deploy path
+## Путь установки
 
 ```
 /opt/keenetic-entware-extras/geo-split-data/
@@ -33,47 +33,47 @@ opkg install geo-split-data
     domains.txt
     ru-whitelist.txt
     geoip/
-      ru.zone.gz       ← Russia (~13K CIDRs)
-      by.zone.gz       ← Belarus
-      kz.zone.gz       ← Kazakhstan
-      cn.zone.gz       ← China
-      us.zone.gz       ← United States
-      de.zone.gz       ← Germany
-      ...              ← 232 zones total
+      ru.zone.gz       ← Россия (~13K CIDR)
+      by.zone.gz       ← Беларусь
+      kz.zone.gz       ← Казахстан
+      cn.zone.gz       ← Китай
+      us.zone.gz       ← США
+      de.zone.gz       ← Германия
+      ...              ← всего 232 зоны
 ```
 
-## Zone files
+## Файлы зон
 
-Zone files are fetched from ipdeny.com during package build (`scripts/fetch-zones.sh`).
-CIDRs are aggregated (merged overlapping/adjacent) to reduce route count.
-Files are stored as `.zone.gz` (gzip compressed), saving ~60–70% flash space on routers.
-geo-split transparently decompresses them at runtime.
+Файлы зон забираются с ipdeny.com при сборке пакета (`scripts/fetch-zones.sh`).
+CIDR агрегируются (слияние пересекающихся и соседних), чтобы сократить число маршрутов.
+Файлы хранятся как `.zone.gz` (сжатие gzip) и экономят ~60–70% места во flash на роутерах.
+geo-split прозрачно распаковывает их во время работы.
 
-**232 zone files included** — all countries with registered IP address blocks.
+**В комплекте 232 файла зон** — все страны с зарегистрированными блоками IP-адресов.
 
-By default, geo-split uses `GEO_ZONE="eas"` (EAEU: ru+by+kz+am+kg).
-To use a different zone, change `GEO_ZONE` in `geo-split/config/config.conf`.
+По умолчанию geo-split использует `GEO_ZONE="eas"` (ЕАЭС: ru+by+kz+am+kg).
+Другая зона задаётся параметром `GEO_ZONE` в `geo-split/config/config.conf`.
 
-### Manual fetch
+### Ручная загрузка
 
 ```sh
-./geo-split-data/scripts/fetch-zones.sh          # skip if fresh (<30 days)
-./geo-split-data/scripts/fetch-zones.sh --force   # force re-download
+./geo-split-data/scripts/fetch-zones.sh          # пропустить, если свежие (<30 дней)
+./geo-split-data/scripts/fetch-zones.sh --force   # скачать заново
 ```
 
-The script downloads, aggregates CIDRs, and compresses each zone with `gzip`.
+Скрипт скачивает зоны, агрегирует CIDR и сжимает каждую через `gzip`.
 
-### Build
+### Сборка
 
-Zone fetching is integrated into `scripts/build-ipk.sh`:
+Загрузка зон встроена в `scripts/build-ipk.sh`:
 
 ```sh
-./scripts/build-ipk.sh geo-split-data   # fetches zones if stale, then builds .ipk
-./scripts/build-ipk.sh all               # builds all 3 packages
+./scripts/build-ipk.sh geo-split-data   # если зоны устарели — скачивает, затем собирает .ipk
+./scripts/build-ipk.sh all               # собирает все 3 пакета
 ```
 
-## Package info
+## Сведения о пакете
 
-- **Package:** `geo-split-data`
+- **Пакет:** `geo-split-data`
 - **Depends:** `keenetic-entware-extras`
-- **Architecture:** all
+- **Архитектура:** all

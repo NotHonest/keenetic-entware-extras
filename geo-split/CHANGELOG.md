@@ -1,288 +1,297 @@
-# Changelog
+# Журнал изменений
 
-All notable changes to `geo-split` are documented here.
+Все заметные изменения `geo-split` описаны здесь.
 
-Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/)
-Versioning: [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html)
+Формат: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/)
+Версионирование: [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html)
+
+## [Не выпущено]
+
+Изменения этого форка. В пакеты фида 0xkee они не входят. Номер версии не менялся.
+
+### Добавлено
+- `scripts/tunnel-check.sh` — только чтение. Для туннеля проверяет `http://1.1.1.1/cdn-cgi/trace` через сам интерфейс. HTTP 2xx и 3xx считаются успехом. Маршруты, firewall и приоритет соединений Keenetic не меняет
+- `scripts/ladder.sh` — только чтение. Собирает глобальные соединения Keenetic, состояние `ping-check` и основной маршрут ядра. Curl, маршруты и приоритет не меняет
+- `scripts/flush-old-tunnel.sh` — по явному `--apply` удаляет conntrack только у потоков, чей выход ещё старый туннель. Потоки через провайдера не трогает. Пока этот туннель остаётся основным маршрутом, удаление не выполняется
 
 ## [0.19.1] - 2026-09-27
 
-### Added
-- `status.sh`: `tunnel_health` check — verifies active output tunnel interface operstate via sysfs. Emits "ok"/"warn"/"skip" in JSON checks (skip when route_out is ISP, not tunnel)
+### Добавлено
+- `status.sh`: проверка `tunnel_health` — сверяет operstate активного выходного туннельного интерфейса через sysfs. В проверках JSON выдаёт "ok"/"warn"/"skip" (skip, если route_out — это ISP, а не туннель)
 
 ## [0.19.0] - 2026-09-08
 
-### Changed
-- Dependency: ISC `aggregate` → `aggregate6` (IPv4+IPv6, 1650× faster on ARM)
-- New opkg feed `aggr6` for aggregate6 binary package
+### Изменено
+- Зависимость: ISC `aggregate` → `aggregate6` (IPv4+IPv6, в 1650 раз быстрее на ARM)
+- Новый фид opkg `aggr6` для бинарного пакета aggregate6
 
 ## [0.18.6] - 2026-08-28
 
-### Changed
-- Docs: installation instructions updated for opkg feed — `opkg install geo-split` instead of `.ipk` filenames, opkg repo setup steps in user manual
+### Изменено
+- Документация: инструкции по установке обновлены под фид opkg — `opkg install geo-split` вместо имён файлов `.ipk`, шаги настройки репозитория opkg в руководстве пользователя
 
 ## [0.18.5] - 2026-08-16
 
-### Changed
-- Legal terminology compliance: tunnel naming in README, user manual, config comments, script comments (18 files)
-- User manual: updated naming — «приоритетный список», «туннель» / «шифрованный канал»
+### Изменено
+- Соответствие юридической терминологии: названия туннеля в README, руководстве пользователя, комментариях конфигурации и скриптов (18 файлов)
+- Руководство пользователя: обновлены названия — «приоритетный список», «туннель» / «шифрованный канал»
 
 ## [0.18.4] - 2026-08-16
 
-### Changed
-- README: add `REFRESH_NICE_ADJUST` to parameter table, add `coreutils-touch` to dependencies
+### Изменено
+- README: в таблицу параметров добавлен `REFRESH_NICE_ADJUST`, в зависимости добавлен `coreutils-touch`
 
 ## [0.18.3] - 2026-08-10
 
-### Changed
-- `route-check.sh`: DNS port detection unified with `lib/ip.sh:detect_dns_port()` —
-  replaces inline `/proc/net/tcp` grep. Now also falls back to SmartDNS main `:6053`
-  if no-speed-check `:6153` is unavailable (previously skipped directly to system `:53`).
+### Изменено
+- `route-check.sh`: определение порта DNS унифицировано с `lib/ip.sh:detect_dns_port()` —
+  вместо встроенного grep по `/proc/net/tcp`. Теперь также откатывается на основной порт SmartDNS `:6053`,
+  если no-speed-check `:6153` недоступен (раньше сразу переходило на системный `:53`).
 
-### Fixed
-- `wan-paths.sh`: detect standby tunnel interfaces from source-based routing tables (Keenetic policy failover tunnels were invisible when not primary)
+### Исправлено
+- `wan-paths.sh`: резервные туннельные интерфейсы определяются по таблицам маршрутизации на основе источника (резервные туннели Keenetic были невидимы, пока не становились основными)
 
 ## [0.18.2] - 2026-07-30
 
-### Changed
-- `status.sh`: colored status marks and bold section headers via `lib/status.sh` color system; `--color`/`--no-color` flag support
-- `status.sh`: `show_domain_sources()` migrated from raw `_text_buf` append to `status_line()` API
+### Изменено
+- `status.sh`: цветные отметки статуса и жирные заголовки секций через цветовую систему `lib/status.sh`; поддержка флагов `--color`/`--no-color`
+- `status.sh`: `show_domain_sources()` переведён с сырого добавления в `_text_buf` на API `status_line()`
 
 ## [0.18.0] - 2026-07-28
 
-### Added
-- `REFRESH_NICE_ADJUST` config option (default `10`) to reduce CPU priority of
-  periodic subnet and domain refresh jobs; set to `0` for normal priority.
+### Добавлено
+- Параметр `REFRESH_NICE_ADJUST` (по умолчанию `10`) снижает приоритет CPU
+  периодических заданий обновления подсетей и доменов; `0` — обычный приоритет.
 
 ## [0.17.5] - 2026-07-28
 
-### Changed
-- Scripts: simplify `_CONFIG_DIR` assignment — replace `$(cd ... && pwd)` subshell
-  with `${SCRIPT_DIR%/*}/config` parameter expansion (6 files)
+### Изменено
+- Скрипты: упрощено присваивание `_CONFIG_DIR` — подоболочка `$(cd ... && pwd)` заменена
+  раскрытием параметра `${SCRIPT_DIR%/*}/config` (6 файлов)
 
 ## [0.17.4] - 2026-07-12
 
-### Added
-- `status.sh`: route-out type detection — `Active out` now shows `isp` or `tunnel`
-  suffix (e.g. `nwg0 (tunnel, tables 1000,1001)`). JSON: `route_out_type` field.
+### Добавлено
+- `status.sh`: определение типа route-out — `Active out` теперь показывает суффикс `isp` или `tunnel`
+  (например, `nwg0 (tunnel, tables 1000,1001)`). JSON: поле `route_out_type`.
 
 ## [0.17.3] - 2026-07-11
 
-### Changed
-- `route-check.sh`: removed `lo`-specific filtering from `devs_seen` — loopback
-  device now passes through all stages like any other dev (consistent with routes
-  and coverage data). Filtering for display is handled by the frontend.
+### Изменено
+- `route-check.sh`: из `devs_seen` убрана отдельная фильтрация `lo` — устройство loopback
+  теперь проходит все этапы как любое другое (согласовано с маршрутами
+  и данными покрытия). Фильтрацию для показа делает фронтенд.
 
 ## [0.17.2] - 2026-07-11
 
-### Refactored
-- `route-check.sh`: extracted `_cidr_overlap_routes()` → `cidr_overlap_routes()` in `lib/ip.sh`
-- `route-check.sh`: simplified CIDR coverage analysis — removed subshell temp-file hack,
-  variables now persist directly via `while read < file`
-- `route-check.sh`: added `_csv_to_json_arr()` helper, deduplicating two identical
-  while-loops for CSV→JSON array conversion
-- `route-check.sh`: JSON output restructured — optional fields built compactly,
-  mega-printf split into 4 readable statements (−59 LOC total)
+### Рефакторинг
+- `route-check.sh`: `_cidr_overlap_routes()` вынесена в `cidr_overlap_routes()` в `lib/ip.sh`
+- `route-check.sh`: упрощён анализ покрытия CIDR — убран обход через временный файл в подоболочке,
+  переменные теперь сохраняются напрямую через `while read < file`
+- `route-check.sh`: добавлен вспомогательный `_csv_to_json_arr()`, убрано дублирование двух одинаковых
+  циклов `while` для преобразования массива CSV→JSON
+- `route-check.sh`: вывод JSON перестроен — необязательные поля собираются компактно,
+  огромный printf разбит на 4 читаемых оператора (всего −59 строк)
 
 ## [0.17.1] - 2026-07-11
 
-### Fixed
-- `wan-paths.sh`: geo-split ROUTE_OUT tunnel detection — reports `type: "tunnel"`
-  instead of `"isp"` when ROUTE_OUT points to a tunnel interface
+### Исправлено
+- `wan-paths.sh`: определение туннеля geo-split ROUTE_OUT — сообщает `type: "tunnel"`
+  вместо `"isp"`, когда ROUTE_OUT указывает на туннельный интерфейс
 
 ## [0.17.0] - 2026-07-07
 
-### Added
-- **CIDR support in route-check**: `route-check.sh` accepts CIDR notation (e.g. `5.0.0.0/8`)
-  in addition to domains and IPs. Hybrid analysis: samples 1-3 IPs for kernel route verdict
-  + coverage analysis from geo-split routing tables (overlap detection). JSON output includes
-  `input_type`, `coverage` (total_ips, overlaps, geo_split_pct) fields.
-- `lib/ip.sh`: new functions `is_cidr()`, `cidr_sample_ips()`, `cidr_total_ips()`
+### Добавлено
+- **Поддержка CIDR в route-check**: `route-check.sh` принимает запись CIDR (например, `5.0.0.0/8`)
+  помимо доменов и IP. Гибридный анализ: выборка 1–3 IP для вердикта маршрута ядра
+  и анализ покрытия по таблицам маршрутизации geo-split (обнаружение пересечений). Вывод JSON включает
+  поля `input_type`, `coverage` (total_ips, overlaps, geo_split_pct).
+- `lib/ip.sh`: новые функции `is_cidr()`, `cidr_sample_ips()`, `cidr_total_ips()`
 
 ## [0.16.1] - 2026-07-06
 
-### Changed
-- **Support .gz zone files**: `update-subnets.sh` reads `.zone.gz` (gzip-compressed)
-  zone files from geo-split-data with transparent `gzip -dc` decompression in pipe.
-  Falls back to plain `.zone` for backward compatibility with geo-split-data <0.6.0.
-- Runtime-downloaded zones saved as `.zone.gz` (default gzip level, low CPU on router)
+### Изменено
+- **Поддержка файлов зон .gz**: `update-subnets.sh` читает сжатые gzip `.zone.gz`
+  из geo-split-data с прозрачной распаковкой `gzip -dc` в конвейере.
+  Для совместимости с geo-split-data <0.6.0 остаётся откат на обычный `.zone`.
+- Зоны, скачанные во время работы, сохраняются как `.zone.gz` (уровень gzip по умолчанию, низкая нагрузка на CPU роутера)
 
 ## [0.16.0] - 2026-06-30
 
-### Added
-- `route-check.sh --from <MAC>`: check route as specific client. Resolves MAC → fwmark
-  via iptables mangle HOTSPOT chain internally. Non-tunnel clients correctly show default
-  route (no longer auto-detect stray tunnel fwmark). Resolves client name via ndmc hotspot.
-- JSON output: `from_mac`, `from_name` fields when `--from` is used
+### Добавлено
+- `route-check.sh --from <MAC>`: проверка маршрута от имени конкретного клиента. MAC → fwmark
+  разрешается внутри через цепочку iptables mangle HOTSPOT. Клиенты без туннеля корректно показывают маршрут
+  по умолчанию (больше не подхватывается чужой fwmark туннеля). Имя клиента берётся через ndmc hotspot.
+- Вывод JSON: поля `from_mac` и `from_name`, когда указан `--from`
 
-### Fixed
-- **Client selection bug**: non-tunnel clients no longer inherit first tunnel fwmark
-  from auto-detect. When `--from` specifies a client without tunnel policy, FWMARK stays
-  empty → route lookup uses main table (correct behavior)
+### Исправлено
+- **Ошибка выбора клиента**: клиенты без туннеля больше не наследуют первый fwmark туннеля
+  из автоопределения. Если `--from` указывает клиента без политики туннеля, FWMARK остаётся
+  пустым → поиск маршрута идёт по основной таблице (верное поведение)
 
-### Changed
-- Default verdict CLI symbol: `→` → `⇒` (visually heavier, distinct from tunnel `=`)
-- FWMARK env-var no longer required for client checks; `--from` replaces the
-  `FWMARK=0x... route-check.sh host iif` pattern
+### Изменено
+- Символ вердикта CLI по умолчанию: `→` → `⇒` (визуально тяжелее и отличается от туннельного `=`)
+- Переменная окружения FWMARK больше не нужна для проверки клиента; `--from` заменяет
+  шаблон `FWMARK=0x... route-check.sh host iif`
 
 ## [0.15.0] - 2026-06-29
 
-### Added
-- `route-check.sh`: diagnostic tool — determines where traffic to a host/IP routes
-- `wan-paths.sh`: list all WAN egress paths as JSON for WebUI diagram
-- CDN mixed verdict: detects when domain IPs route through different interfaces
-- Per-IP verdict tracking (geo-split/tunnel/default for each resolved IP)
-- JSON output: `verdict_details[]`, `verdict_devs[]`, per-route `verdict` field
-- CLI: "⚠ mixed (dev1,dev2)" verdict display with per-IP annotations
+### Добавлено
+- `route-check.sh`: диагностика — куда маршрутизируется трафик к хосту или IP
+- `wan-paths.sh`: все пути выхода WAN в JSON для схемы WebUI
+- Смешанный вердикт CDN: замечает, когда IP домена идут через разные интерфейсы
+- Вердикт по каждому IP (geo-split / туннель / по умолчанию для каждого разрешённого IP)
+- Вывод JSON: `verdict_details[]`, `verdict_devs[]`, поле `verdict` у каждого маршрута
+- CLI: показ вердикта «⚠ mixed (dev1,dev2)» с пометками по каждому IP
 
 ## [0.14.0] - 2026-06-18
 
-### Fixed
-- **NDM hook: tables not refilled on interface switch** — when uplink interface
-  went down, kernel removed routes from custom tables before the hook ran. The old
-  hook checked `ip route show table X | grep "dev iface"` which always returned
-  empty (routes already gone) → hook exited without action → tables stayed empty
-  until next 15-min cron. New reconciliation pattern checks table health on EVERY
-  `ifstatechanged` event and refills if tables are empty or point to wrong interface.
-- NDM hook: failover to backup ISP (already-UP interface) now triggers refill
-  immediately instead of waiting for cron.
+### Исправлено
+- **Хук NDM: таблицы не перезаполнялись при смене интерфейса** — когда исходящий интерфейс
+  опускался, ядро удаляло маршруты из пользовательских таблиц до запуска хука. Старый
+  хук проверял `ip route show table X | grep "dev iface"`, и это всегда было
+  пусто (маршруты уже исчезли) → хук выходил без действий → таблицы оставались пустыми
+  до следующего cron через 15 мин. Новый шаблон согласования проверяет здоровье таблиц на каждом
+  событии `ifstatechanged` и перезаполняет их, если таблицы пусты или указывают на другой интерфейс.
+- Хук NDM: переход на резервный ISP (интерфейс уже UP) сразу запускает перезаполнение,
+  а не ждёт cron.
 
-### Changed
-- `ndm-hook.sh`: complete rewrite — reconciliation pattern replaces reactive
-  UP/DOWN case handler. Single `tables_ok()` check covers all scenarios.
-- `lib/ip.sh`: `fill_routes_batch()` stamp files now store interface name
-  (was empty `touch`). Enables fast dev-mismatch detection in hook without
-  `ip route` fork. Backward-compatible (status.sh reads only mtime).
+### Изменено
+- `ndm-hook.sh`: полная переработка — шаблон согласования вместо реактивного
+  обработчика веток UP/DOWN. Одна проверка `tables_ok()` покрывает все сценарии.
+- `lib/ip.sh`: файлы-метки `fill_routes_batch()` теперь хранят имя интерфейса
+  (раньше был пустой `touch`). Хук быстро видит несовпадение dev без
+  вызова `ip route`. Обратная совместимость сохранена (status.sh читает только mtime).
 
 ## [0.13.2] - 2026-06-15
 
-### Changed
-- `scripts/status.sh`: refactored text output to use declarative accumulator API
-  (`status_line`, `status_section`, `status_emit_text`). Added `text_output()`
-  function parallel to `json_output()`. No visual output change.
+### Изменено
+- `scripts/status.sh`: текстовый вывод переведён на декларативный API накопителя
+  (`status_line`, `status_section`, `status_emit_text`). Добавлена функция `text_output()`
+  параллельно `json_output()`. Вид вывода не изменился.
 
 ## [0.13.1] - 2026-06-15
 
-### Changed
-- `scripts/status.sh`: refactored `json_output()` to use declarative
-  `status_detail`/`status_check_result`/`status_emit_json` API from lib/status.sh.
-  No change to JSON output format.
+### Изменено
+- `scripts/status.sh`: `json_output()` переведена на декларативный
+  API `status_detail`/`status_check_result`/`status_emit_json` из lib/status.sh.
+  Формат вывода JSON не изменился.
 
 ## [0.13.0] - 2026-06-07
 
-### Added
-- Multi-zone GeoIP support: `GEO_ZONE` config (country code or union name)
-- All 240 country zones supported via pre-packaged geo-split-data files
-- 40+ geopolitical unions (eas, cis, brics, eu, nato, asean, gcc, etc.)
-- Shared zone library `lib/geo.sh` with `resolve_geo_zone()` function
-- `active_zones` field in status JSON output (resolved country list)
-- Backward-compatible `SUBNET_URL` override for custom URL configs
+### Добавлено
+- Несколько зон GeoIP: параметр `GEO_ZONE` (код страны или имя объединения)
+- Все 240 зон стран через готовые файлы geo-split-data
+- 40+ геополитических объединений (eas, cis, brics, eu, nato, asean, gcc и др.)
+- Общая библиотека зон `lib/geo.sh` с функцией `resolve_geo_zone()`
+- Поле `active_zones` в JSON-выводе статуса (список стран, в которые раскрылась зона)
+- Обратно совместимое переопределение `SUBNET_URL` для своих URL
 
-### Changed
-- `update-subnets.sh`: multi-zone merge (cat all .zone files → aggregate → table)
-- `defaults.conf`: `GEO_ZONE="eas"` replaces hardcoded `SUBNET_URL` for RU
-- `status.sh`: shows resolved zone list ("eas → [ru by kz am kg]")
-- Summary key `active_zones` shown on dashboard
+### Изменено
+- `update-subnets.sh`: слияние нескольких зон (cat всех файлов .zone → aggregate → таблица)
+- `defaults.conf`: `GEO_ZONE="eas"` вместо зашитого `SUBNET_URL` для RU
+- `status.sh`: показывает раскрытый список зон ("eas → [ru by kz am kg]")
+- Ключ сводки `active_zones` показывается на панели
 
 ## [0.12.5] - 2026-06-02
 
-### Fixed
-- WebUI "Unknown format": BusyBox sed SIGPIPE write error in `check_mode()` when
-  extracting gateway from 8K+ route table via `sed | head -1` pipeline; stderr
-  leaked into JSON output through api-router's `2>&1` redirect. Replaced with
-  single-process awk that exits on first match (no pipe, no SIGPIPE).
+### Исправлено
+- WebUI «Unknown format»: ошибка записи SIGPIPE у BusyBox sed в `check_mode()` при
+  извлечении шлюза из таблицы на 8K+ маршрутов конвейером `sed | head -1`; stderr
+  попадал в вывод JSON из-за перенаправления `2>&1` в api-router. Заменено
+  однопроцессным awk, который выходит на первом совпадении (без конвейера и без SIGPIPE).
 
 ## [0.12.4] - 2026-06-02
 
-### Fixed
-- Package: `scripts/bug-report.sh` was missing from .ipk build
+### Исправлено
+- Пакет: в сборке .ipk не было `scripts/bug-report.sh`
 
 ## [0.12.3] - 2026-06-01
 
-### Improved
-- Performance: `check_mode()` in status.sh now reads only 5 routes per table
-  instead of all ~11K to detect active interface (head -5 optimization)
-- Performance: `check_routes()` uses `/proc/net/fib_triestat` to count routes
-  instantly instead of dumping 8K+ lines through `ip route | wc -l`
+### Улучшено
+- Производительность: `check_mode()` в status.sh читает только 5 маршрутов на таблицу
+  вместо всех ~11K, чтобы узнать активный интерфейс (оптимизация head -5)
+- Производительность: `check_routes()` считает маршруты через `/proc/net/fib_triestat`
+  сразу, а не выводит 8K+ строк через `ip route | wc -l`
 
-### Added
-- `table_route_count()` helper in lib/ip.sh — zero-cost route counting via
-  kernel FIB trie stats with fallback to `wc -l`
+### Добавлено
+- Вспомогательная `table_route_count()` в lib/ip.sh — подсчёт маршрутов без лишних затрат через
+  статистику FIB trie ядра, с откатом на `wc -l`
 
 ## [0.12.2] - 2026-06-01
 
-### Fixed
-- Domain cache freshness drift: `touch -d "@$t_start"` anchors mtime to operation
-  start, not end. Prevents +cron_interval delay when resolve takes >0s.
+### Исправлено
+- Смещение свежести кэша доменов: `touch -d "@$t_start"` привязывает mtime к началу операции,
+  а не к концу. Убирает добавку интервала cron, если разрешение занимает больше 0 с.
 
-### Added
-- Dependency: `coreutils-touch` (GNU touch with `-d` support for BusyBox routers)
+### Добавлено
+- Зависимость: `coreutils-touch` (GNU touch с `-d` для роутеров на BusyBox)
 
 ## [0.12.1] - 2026-06-01
 
-### Changed
-- `status.sh`: status word (`✓ Alive` / `⚠ Disabled` / `✗ Fail`) printed on title line
-  for machine-parseable extraction by `kee-status`
-- `status.sh` JSON: added `gateway` field (`via <IP>` or `scope link`);
-  reorganized grid — `ndm_hook` moved to row 4 (was row 2)
+### Изменено
+- `status.sh`: слово статуса (`✓ Alive` / `⚠ Disabled` / `✗ Fail`) печатается в строке заголовка,
+  чтобы `kee-status` мог разобрать его машинно
+- JSON `status.sh`: добавлено поле `gateway` (`via <IP>` или `scope link`);
+  сетка перестроена — `ndm_hook` перенесён в строку 4 (был в строке 2)
 
 ## [0.12.0] - 2026-06-01
 
-### Changed
-- Init script moved to `init.d/S99geo-split` (symlink in `/opt/etc/init.d/`);
-  enables graceful user disable by removing the symlink
-- postinst/prerm manage init.d symlink lifecycle
-- NDM hook (`ndm-hook.sh`) respects disabled state via `is_service_enabled`
-- Cron refresh calls real script path (works even if symlink restored later)
+### Изменено
+- Скрипт инициализации перенесён в `init.d/S99geo-split` (симлинк в `/opt/etc/init.d/`);
+  сервис можно отключить, удалив симлинк
+- postinst/prerm управляют жизненным циклом симлинка init.d
+- Хук NDM (`ndm-hook.sh`) учитывает отключённое состояние через `is_service_enabled`
+- Обновление по cron вызывает реальный путь скрипта (работает, даже если симлинк восстановят позже)
 
-### Added
-- `status.sh`: `"enabled"` field in JSON output; text mode shows "⚠ Disabled"
-  warning when service symlink is absent
+### Добавлено
+- `status.sh`: поле `"enabled"` в выводе JSON; в текстовом режиме предупреждение «⚠ Disabled»,
+  если симлинка службы нет
 
 ## [0.11.0] - 2026-05-31
 
-### Fixed
-- Routes in custom tables (1000/1001) now include `via <gateway>` when ISP
-  interface has a nexthop; fixes "host unreachable" on Ethernet ISPs that don't do proxy-ARP for scope-link routes
+### Исправлено
+- Маршруты в пользовательских таблицах (1000/1001) теперь содержат `via <gateway>`, если у интерфейса ISP
+  есть nexthop; это убирает «host unreachable» на Ethernet ISP, которые не делают proxy-ARP для маршрутов scope link
 
-### Added
-- `lib/ip.sh`: `detect_gateway(dev)` — auto-detect nexthop IP from ISP default route
-- `lib/ip.sh`: `resolve_target_gateway(dev)` — resolve gateway from config or auto-detect
-- `config/defaults.conf`: `ROUTE_GW` option (`auto`|`none`|explicit IP)
-  - `auto` (default) — detect from ISP route; uses `via` for Ethernet,
-    dev-only for point-to-point (LTE/PPP) where no gateway exists
-  - `none` — force legacy behavior (scope link, no gateway)
-  - explicit IP — fixed gateway for all geo-split routes
-- `status.sh`: display detected gateway in compact status output
+### Добавлено
+- `lib/ip.sh`: `detect_gateway(dev)` — автоопределение IP nexthop из маршрута ISP по умолчанию
+- `lib/ip.sh`: `resolve_target_gateway(dev)` — шлюз из конфигурации или автоопределение
+- `config/defaults.conf`: параметр `ROUTE_GW` (`auto`|`none`|явный IP)
+  - `auto` (по умолчанию) — взять из маршрута ISP; `via` для Ethernet,
+    только dev для точка-точка (LTE/PPP), где шлюза нет
+  - `none` — прежнее поведение (scope link, без шлюза)
+  - явный IP — фиксированный шлюз для всех маршрутов geo-split
+- `status.sh`: определённый шлюз в компактном выводе статуса
 
 ## [0.10.8] - 2026-05-30
 
-### Changed
-- `DOWNLOAD_INTERFACES` default: `"default *"` — auto-detect all active tunnel interfaces (awg-manager, OpenConnect, Tailscale, etc.) instead of manually listing glob patterns
-- Glob expansion in `resolve_download_interfaces()` now skips infrastructure interfaces (`lo`, `br*`, `ifb*`)
+### Изменено
+- `DOWNLOAD_INTERFACES` по умолчанию: `"default *"` — автоопределение всех активных туннельных интерфейсов (awg-manager, OpenConnect, Tailscale и т. д.) вместо ручного списка шаблонов glob
+- Раскрытие glob в `resolve_download_interfaces()` пропускает служебные интерфейсы (`lo`, `br*`, `ifb*`)
 
 ## [0.10.7] - 2026-05-25
 
-### Added
-- Zone sizes research doc (`docs/zone-sizes-research.md`): country CIDR counts, hardware compatibility matrix, usage scenarios
+### Добавлено
+- Исследование размеров зон (`docs/zone-sizes-research.md`): число CIDR по странам, матрица совместимости с оборудованием, сценарии использования
 
 ## [0.10.6] - 2026-05-16
 
-### Changed
-- Domain resolution interval reduced from 4h to 1h (`DOMAINS_UPDATE_INTERVAL=3600`)
-- Skip route table rebuild when resolved IPs haven't changed (`cmp` diff check)
-- Guard against empty resolution results (DNS down → keep old cache)
+### Изменено
+- Интервал разрешения доменов снижен с 4 ч до 1 ч (`DOMAINS_UPDATE_INTERVAL=3600`)
+- Таблица маршрутов не пересобирается, если разрешённые IP не изменились (сравнение через `cmp`)
+- Защита от пустого результата разрешения (DNS недоступен → остаётся старый кэш)
 
 ## [0.10.5] - 2026-05-15
 
-### Changed
-- Move all runtime files (pidfile, batch, caches) from `/tmp` to `/opt/tmp`
+### Изменено
+- Все файлы времени выполнения (pidfile, batch, кэши) перенесены из `/tmp` в `/opt/tmp`
 
 ## [0.10.4] - 2026-05-12
 
-### Fixed
-- Status script reliability improvements
-- Race condition on cold boot with slow DNS resolution
+### Исправлено
+- Надёжнее работает скрипт статуса
+- Гонка при холодной загрузке, если DNS разрешается медленно
 
-### Changed
-- Async subnet loading on boot for faster startup
+### Изменено
+- Асинхронная загрузка подсетей при старте, чтобы служба поднималась быстрее

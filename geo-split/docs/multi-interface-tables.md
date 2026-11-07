@@ -5,9 +5,9 @@
 Параметр `ROUTE_IN` в [`defaults.conf`](../config/defaults.conf) задаёт **список LAN-интерфейсов через пробел**:
 
 ```sh
-# Source LAN/tunnel interfaces for ip rule iif (space-separated)
-# Each interface gets its own ip rule → custom route table
-# Keenetic bridges: br0 = Home LAN, br1 = Guest network
+# Входные интерфейсы LAN или туннеля для ip rule iif (через пробел)
+# У каждого интерфейса своё ip rule на общую таблицу
+# Мосты Keenetic: br0 — домашняя сеть, br1 — гостевая
 ROUTE_IN="br0"
 ```
 
@@ -19,10 +19,10 @@ ROUTE_IN="br0"
 
 Таблицы нумеруются **по типу данных**:
 
-| Table | Priority | Содержимое |
+| Таблица | Приоритет | Содержимое |
 |-------|----------|------------|
-| **1000** | 50 | Domains — /32 host routes (~175 записей) |
-| **1001** | 51 | Subnets — GeoIP CIDR (~11K записей) |
+| **1000** | 50 | Домены — маршруты /32 (около 175 записей) |
+| **1001** | 51 | Подсети — GeoIP CIDR (около 11 тысяч записей) |
 | 1002+ | 52+ | (зарезервировано для будущих списков) |
 
 Конфигурация:
@@ -57,10 +57,10 @@ done
 Создаются следующие ip rules:
 
 ```
-ip rule add iif br0 table 1000 priority 50   # br0 → domains
-ip rule add iif br0 table 1001 priority 51   # br0 → subnets
-ip rule add iif br1 table 1000 priority 50   # br1 → domains
-ip rule add iif br1 table 1001 priority 51   # br1 → subnets
+ip rule add iif br0 table 1000 priority 50   # br0 → домены
+ip rule add iif br0 table 1001 priority 51   # br0 → подсети
+ip rule add iif br1 table 1000 priority 50   # br1 → домены
+ip rule add iif br1 table 1001 priority 51   # br1 → подсети
 ```
 
 **Итого**: 2 таблицы (1000, 1001) × N интерфейсов ip rules. Таблицы не дублируются и не перенумеровываются — только rules множатся.
@@ -71,19 +71,19 @@ ip rule add iif br1 table 1001 priority 51   # br1 → subnets
 
 ```mermaid
 flowchart LR
-  BR0["🖥 br0<br/>Home LAN"] --> R50{"prio 50<br/>table 1000"}
-  BR1["🖥 br1<br/>Guest LAN"] --> R50
+  BR0["🖥 br0<br/>Домашняя сеть"] --> R50{"prio 50<br/>table 1000"}
+  BR1["🖥 br1<br/>Гостевая сеть"] --> R50
   BR0 --> R51{"prio 51<br/>table 1001"}
   BR1 --> R51
 
-  R50 -->|"match /32"| T1000["📋 Table 1000<br/>domains<br/>~175 host routes"]
-  R51 -->|"match CIDR"| T1001["📋 Table 1001<br/>subnets<br/>~11K routes"]
+  R50 -->|"совпал /32"| T1000["📋 Таблица 1000<br/>домены<br/>около 175 маршрутов"]
+  R51 -->|"совпал CIDR"| T1001["📋 Таблица 1001<br/>подсети<br/>около 11 тысяч"]
 
   T1000 --> OUT["🌐 ROUTE_OUT<br/>ISP / Tunnel"]
   T1001 --> OUT
 
-  R50 -->|no match| R51
-  R51 -->|no match| MAIN["🔀 main table<br/>default route"]
+  R50 -->|нет совпадения| R51
+  R51 -->|нет совпадения| MAIN["🔀 основная таблица<br/>маршрут по умолчанию"]
 
   classDef client fill:#c2d9f5,stroke:#2680eb,stroke-width:2px,color:#000
   classDef rule fill:#f5efc2,stroke:#b3a326,stroke-width:2px,color:#000

@@ -23,6 +23,8 @@
         github: null,
         vacuum: null,
         tunnel: null,
+        ladder: null,
+        ladderTimer: 0,
         ispName: "",
         busy: false,
         message: "",
@@ -197,15 +199,101 @@
         }
         var name = pretty(t.dev || def);
         if (t.reachable && t.dns_direct) {
-            return '<p class="ew-scenario__ok">' + esc(name) + ' снова отвечает. Зарубежный DNS ещё минуту может идти напрямую, потом вернётся в туннель.</p>';
+            return '<p class="ew-scenario__ok">' + esc(name) + ' снова отвечает. Зарубежный DNS ещё минуту может идти напрямую, потом вернётся в этот туннель.</p>';
         }
         if (t.reachable) {
-            return '<p class="ew-scenario__ok">' + esc(name) + ' отвечает. Зарубежный DNS идёт через него. Если туннель замолчит, DNS через пару минут спросит провайдера напрямую.</p>';
+            return '<p class="ew-scenario__ok">' + esc(name) + ' отвечает. Зарубежный DNS идёт через тот VPN, который сейчас основной. Если он замолчит, Keenetic возьмёт следующий, и DNS уйдёт за ним.</p>';
         }
         if (t.dns_direct) {
             return '<p class="ew-scenario__warn">' + esc(name) + ' молчит. Зарубежные сайты могут не открываться, пока Keenetic держит его основным маршрутом. Зарубежный DNS временно спрашивает провайдера напрямую.</p>';
         }
-        return '<p class="ew-scenario__warn">' + esc(name) + ' молчит. Зарубежный DNS ещё через него. Если так продлится пару минут, DNS перейдёт на провайдера. Маршрут Keenetic страница не переключает.</p>';
+        return '<p class="ew-scenario__warn">' + esc(name) + ' молчит. Зарубежный DNS ещё через него. Если так продлится, DNS уйдёт на следующий живой VPN или к провайдеру. Маршрут Keenetic страница не переключает.</p>';
+    }
+
+    function ladderCurrentName(data) {
+        if (!data || data.ok === false) return "";
+        var dev = data.default_dev || "";
+        var steps = data.steps || [];
+        for (var i = 0; i < steps.length; i++) {
+            if (steps[i].dev === dev && steps[i].name) return steps[i].name;
+        }
+        return dev ? pretty(dev) : "";
+    }
+
+    function stepRole(step) {
+        if (step.role === "primary") return "Основной";
+        if (step.role === "down") return "Молчит";
+        if (step.role === "isp" || step.kind === "isp") return "Провайдер";
+        return "Ждёт";
+    }
+
+    function stepMeta(step) {
+        if (step.link !== "up") return "нет связи";
+        if (step.kind === "isp") return "напрямую";
+        if (step.check === "pass") return "проверка проходит";
+        if (step.check === "fail") return "проверка не проходит";
+        return "без проверки";
+    }
+
+    function ladderInner() {
+        var data = state.ladder;
+        if (!data) {
+            return '<p class="ew-scenario__ladder-lead">Смотрю лестницу соединений…</p>';
+        }
+        if (data.ok === false) {
+            return '<p class="ew-scenario__warn">Не удалось прочитать лестницу соединений.</p>';
+        }
+        var steps = data.steps || [];
+        var current = ladderCurrentName(data) || "неизвестно";
+        var html = '<p class="ew-scenario__ladder-lead">Сейчас основной — ' + esc(current) +
+            '. Сверху тот, кого Keenetic выбирает первым. Строки обновляются каждые 30 секунд. Приоритет эта страница не меняет.</p>';
+        if (!steps.length) {
+            return html + '<p class="ew-scenario__warn">Keenetic не показал соединений с приоритетом.</p>' + ladderEvents(data);
+        }
+        html += '<div class="ew-scenario__steps">';
+        for (var i = 0; i < steps.length; i++) {
+            var step = steps[i];
+            var role = step.role;
+            if (role !== "primary" && role !== "backup" && role !== "isp" && role !== "down") role = "backup";
+            html += '<div class="ew-scenario__step ew-scenario__step--' + esc(role) + '">' +
+                '<div class="ew-scenario__step-role">' + esc(stepRole(step)) + '</div>' +
+                '<div class="ew-scenario__step-name">' + esc(step.name || pretty(step.dev)) + '</div>' +
+                '<div class="ew-scenario__step-meta">' + esc(stepMeta(step)) + '</div>' +
+                '</div>';
+        }
+        html += '</div>';
+        html += ladderEvents(data);
+        return html;
+    }
+
+    function ladderEvents(data) {
+        var events = (data && data.events) || [];
+        var html = '<div class="ew-scenario__events-title">Последние переходы</div>';
+        if (!events.length) {
+            return html + '<p class="ew-scenario__events-empty">Переходов ещё не было. Здесь появятся смена основного маршрута и переход DNS.</p>';
+        }
+        html += '<ul class="ew-scenario__events">';
+        var n = events.length < 10 ? events.length : 10;
+        for (var i = 0; i < n; i++) {
+            html += '<li>' + esc(events[i]) + '</li>';
+        }
+        html += '</ul>';
+        return html;
+    }
+
+    function paintLadder() {
+        var box = document.querySelector("[data-scenario-ladder]");
+        if (box) box.innerHTML = ladderInner();
+        var live = ladderCurrentName(state.ladder);
+        var rest = document.querySelector("[data-scenario-rest]");
+        if (rest && live) rest.textContent = live;
+    }
+
+    function refreshLadder() {
+        soft("/api/geo-split/ladder").then(function (data) {
+            state.ladder = data;
+            paintLadder();
+        });
     }
 
     function render() {
@@ -222,7 +310,8 @@
         var plan = ispName ? buildPayload(ispName) : { changed: false, payload: {} };
         var homeLabel = pretty(HOME_IIF);
         var vacuumLabel = pretty(VACUUM_IIF);
-        var restLabel = def ? pretty(def) : "основной маршрут Keenetic";
+        var liveName = ladderCurrentName(state.ladder);
+        var restLabel = liveName || (def ? pretty(def) : "основной маршрут Keenetic");
 
         var ispSelect = "";
         if (cands.length > 1) {
@@ -240,8 +329,8 @@
 
         root.innerHTML =
             '<h2 class="ew-scenario__title">ЕАЭС напрямую, остальное в VPN</h2>' +
-            '<p class="ew-scenario__lead">Домашняя сеть: российские сайты через провайдера, всё остальное — туда, куда Keenetic отправил основной маршрут. Сейчас это ' +
-            esc(restLabel) + '.</p>' +
+            '<p class="ew-scenario__lead">Домашняя сеть: российские сайты через провайдера, всё остальное — по лестнице соединений Keenetic.</p>' +
+            '<div class="ew-scenario__ladder" data-scenario-ladder>' + ladderInner() + '</div>' +
             '<div class="ew-scenario__grid">' +
                 checkCard("ozon.ru · " + homeLabel, state.ozon, "direct") +
                 checkCard("github.com · " + homeLabel, state.github, "vpn") +
@@ -251,7 +340,7 @@
             tunnelLine(def) +
             '<div class="ew-scenario__fields">' +
                 '<div class="ew-scenario__field"><div class="ew-scenario__field-label">Напрямую</div><div class="ew-scenario__field-value">ЕАЭС</div><div class="ew-scenario__field-hint">Россия, Беларусь, Казахстан, Армения, Киргизия</div></div>' +
-                '<div class="ew-scenario__field"><div class="ew-scenario__field-label">Остальное</div><div class="ew-scenario__field-value">' + esc(restLabel) + '</div><div class="ew-scenario__field-hint">Задаётся приоритетом соединений в Keenetic</div></div>' +
+                '<div class="ew-scenario__field"><div class="ew-scenario__field-label">Остальное</div><div class="ew-scenario__field-value" data-scenario-rest>' + esc(restLabel) + '</div><div class="ew-scenario__field-hint">Сначала основной VPN, потом запасной, затем провайдер</div></div>' +
                 '<div class="ew-scenario__field"><div class="ew-scenario__field-label">Где действует</div><div class="ew-scenario__field-value">' + esc(homeLabel) + '</div><div class="ew-scenario__field-hint">' + esc(vacuumLabel) + ' в правило не входит</div></div>' +
                 ispSelect +
             '</div>' +
@@ -261,7 +350,7 @@
                 '<button type="button" class="ndw-button ndw-button--toggle ndw-button--small" data-scenario-advanced>Дополнительно</button>' +
                 (state.message ? '<span class="ew-scenario__status ew-scenario__status--' + esc(state.messageKind) + '">' + esc(state.message) + '</span>' : '') +
             '</div>' +
-            '<p class="ew-scenario__fine">Кнопка не меняет приоритет соединений Keenetic и не трогает DNS сегмента пылесоса. Зарубежный трафик идёт туда, куда смотрит основной маршрут. Если VPN замолчит, зарубежный DNS через пару минут перейдёт на провайдера сам, а маршрут Keenetic эта страница не переключает.</p>';
+            '<p class="ew-scenario__fine">Кнопка не меняет приоритет соединений Keenetic и не трогает DNS сегмента пылесоса. Зарубежный трафик идёт туда, куда смотрит основной маршрут. Зарубежный DNS следует за ним: в текущий VPN, а если живого VPN нет — к провайдеру. Эта страница маршрут не переключает.</p>';
     }
 
     function load() {
@@ -275,7 +364,8 @@
             soft("/api/geo-split/route-check?host=ozon.ru&from=br0"),
             soft("/api/geo-split/route-check?host=github.com&from=br0"),
             soft("/api/geo-split/route-check?host=github.com&from=br1"),
-            soft("/api/geo-split/tunnel-check")
+            soft("/api/geo-split/tunnel-check"),
+            soft("/api/geo-split/ladder")
         ]).then(function (rows) {
             state.interfaces = rows[0] && rows[0].ok !== false ? rows[0] : { interfaces: [] };
             if (rows[1] && rows[1].config) {
@@ -286,6 +376,7 @@
             state.github = rows[3];
             state.vacuum = rows[4];
             state.tunnel = rows[5];
+            state.ladder = rows[6];
             state.busy = false;
             render();
         });
@@ -364,6 +455,9 @@
         if (!root) return;
         root.addEventListener("click", onClick);
         root.addEventListener("change", onChange);
+        if (!state.ladderTimer) {
+            state.ladderTimer = setInterval(refreshLadder, 30000);
+        }
         if (EW.loadIfaceMap) {
             EW.loadIfaceMap().then(load, load);
         } else {

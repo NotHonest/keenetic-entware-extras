@@ -1,17 +1,19 @@
-# opkg Repository — keenetic-entware-extras
+# Репозиторий opkg — keenetic-entware-extras
 
-Pre-built `.ipk` packages for Keenetic routers running Entware.
+Готовые пакеты `.ipk` для роутеров Keenetic с Entware.
 
-## Channels
+Пакеты собирает и публикует автор оригинала, [0xkee/keenetic-entware-extras](https://github.com/0xkee/keenetic-entware-extras). Файлы этого форка (экран сценария, `tunnel-check`, `ladder.sh`, `dns-tunnel-watch.sh`) в фид не входят. `opkg upgrade` заменяет их версией из фида. `config.conf` сохраняется.
 
-| Channel | URL | Description |
+## Каналы
+
+| Канал | URL | Описание |
 |---------|-----|-------------|
-| **stable** | `https://0xkee.github.io/keenetic-entware-extras/stable` | Recommended. Tested releases |
-| **dev** | `https://0xkee.github.io/keenetic-entware-extras/dev` | Bleeding edge. Latest builds |
+| **stable** | `https://0xkee.github.io/keenetic-entware-extras/stable` | Рекомендуется. Проверенные выпуски |
+| **dev** | `https://0xkee.github.io/keenetic-entware-extras/dev` | Свежие сборки |
 
-## Quick Setup
+## Быстрое подключение
 
-Add the **stable** repository (recommended):
+Добавьте канал **stable**:
 
 ```sh
 cat >> /opt/etc/opkg.conf << 'EOF'
@@ -21,74 +23,74 @@ EOF
 opkg update
 ```
 
-## Switch Channel
+## Смена канала
 
-Switch from stable to dev:
+Со stable на dev:
 
 ```sh
 sed -i 's|/stable$|/dev|' /opt/etc/opkg.conf
 opkg update
 ```
 
-Switch from dev to stable:
+С dev на stable:
 
 ```sh
 sed -i 's|/dev$|/stable|' /opt/etc/opkg.conf
 opkg update && opkg upgrade
 ```
 
-## Available Packages
+## Пакеты
 
-| Package | Description |
+| Пакет | Описание |
 |---------|-------------|
-| `keenetic-entware-extras` | Shared libraries for all packages |
-| `geo-split` | Geo-based policy routing (subnets + ip rules) |
-| `geo-split-data` | Zone lists and GeoIP data |
-| `smartdns-geo-conf` | SmartDNS geo-aware DNS configuration |
-| `smartdns-redirect` | DNS redirect with netfilter hooks |
-| `net-check` | Network connectivity diagnostics |
-| `webui` | Web dashboard (nginx + Lua) |
+| `keenetic-entware-extras` | Общие библиотеки для всех пакетов |
+| `geo-split` | Маршрутизация по географии (подсети и ip rule) |
+| `geo-split-data` | Списки зон и данные GeoIP |
+| `smartdns-geo-conf` | Настройка SmartDNS с разделением по зонам |
+| `smartdns-redirect` | Перехват DNS через netfilter |
+| `net-check` | Диагностика связности |
+| `webui` | Веб-панель (nginx и Lua) |
 
-All packages are `Architecture: all` — compatible with any Entware-supported Keenetic router (mipsel, mips, aarch64).
+У всех пакетов `Architecture: all`. Они подходят любому роутеру Keenetic, который поддерживает Entware (mipsel, mips, aarch64).
 
-## Install
+## Установка
 
 ```sh
-# Core libraries (dependency for all other packages)
+# Общие библиотеки. Нужны остальным пакетам
 opkg install keenetic-entware-extras
 
-# Geo-based split routing
+# Разделение маршрутов по географии
 opkg install geo-split geo-split-data
 
-# SmartDNS configuration
+# Настройка SmartDNS
 opkg install smartdns-geo-conf smartdns-redirect
 
-# Network diagnostics
+# Диагностика сети
 opkg install net-check
 
-# Web dashboard
+# Веб-панель
 opkg install webui
 ```
 
-## Update
+## Обновление
 
 ```sh
 opkg update && opkg upgrade
 ```
 
-## Uninstall
+## Удаление
 
 ```sh
-# Remove individual packages
+# Снять пакеты по одному
 opkg remove webui
 opkg remove net-check
 opkg remove smartdns-redirect smartdns-geo-conf
 opkg remove geo-split geo-split-data
 
-# Remove core libraries (last)
+# Общие библиотеки — последними
 opkg remove keenetic-entware-extras
 
-# Remove repository config
+# Убрать строки репозитория
 sed -i '/^src\/gz kee /d; /^src\/gz aggr6 /d' /opt/etc/opkg.conf
 opkg update
 ```

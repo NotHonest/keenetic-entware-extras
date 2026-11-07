@@ -1,54 +1,56 @@
-# Keenetic Network Interfaces Reference
+# Справка по сетевым интерфейсам Keenetic
 
-Developer reference for network interface prefixes on Keenetic routers (KeeneticOS 5.0+).
-Used in [`api-system.lua`](webui/lua/api-system.lua) interface blacklist and [`lib/ip.sh`](lib/ip.sh) tunnel detection.
+Справка для разработки: префиксы сетевых интерфейсов на роутерах Keenetic (KeeneticOS 5.0+).
+Используется в чёрном списке [`api-system.lua`](webui/lua/api-system.lua) и в определении туннеля [`lib/ip.sh`](lib/ip.sh).
 
-## Interface Table
+## Таблица интерфейсов
 
-| Prefix | Description | Type | Show in UI | Example |
+| Префикс | Описание | Тип | Показ в UI | Пример |
 |--------|-------------|------|:----------:|---------|
-| `br0`, `br1` | LAN / Guest bridge | user | ✅ | `br0` (Home) |
-| `eth[0-9]` | Physical Ethernet (IPoE WAN) | user | ⚠️ label | `eth3` → ISP |
+| `br0`, `br1` | Мост LAN / гостевой сети | user | ✅ | `br0` (домашняя сеть) |
+| `eth[0-9]` | Физический Ethernet (IPoE WAN) | user | ⚠️ подпись | `eth3` → провайдер |
 | `ppp[0-9]`, `pppoe[0-9]` | PPPoE WAN | user | ✅ | `ppp0` |
-| `lte_br*` | 3G/4G USB modem | user | ✅ | `lte_br0` |
-| `nwg*` | WireGuard (NDM-managed) | tunnel | ✅ | `nwg0` |
+| `lte_br*` | USB-модем 3G/4G | user | ✅ | `lte_br0` |
+| `nwg*` | WireGuard под управлением NDM | tunnel | ✅ | `nwg0` |
 | `awg*` | AmneziaWG | tunnel | ✅ | `awg0` |
-| `wg*` | WireGuard (manual) | tunnel | ✅ | `wg0` |
+| `wg*` | WireGuard, заведённый вручную | tunnel | ✅ | `wg0` |
 | `ovpn*` | OpenVPN | tunnel | ✅ | `ovpn0` |
 | `l2tp*` | L2TP VPN | tunnel | ✅ | `l2tp0` |
 | `pptp*` | PPTP VPN | tunnel | ✅ | `pptp0` |
 | `sstp*` | SSTP VPN | tunnel | ✅ | `sstp0` |
-| `ipsec*` | IPsec tunnel | tunnel | ✅ | `ipsec0` |
-| `tun[0-9]*` | Generic TUN device | tunnel | ✅ | `tun0` |
-| `tap*` | Generic TAP device | tunnel | ✅ | `tap0` |
-| `wwan*` | WiFi client (WISP) | user | ⚠️ label | `wwan0` |
-| `usb*` | USB tethering | user | ⚠️ label | `usb0` |
-| `lo` | Loopback | infra | ❌ | `lo` |
-| `ra[0-9]` | 2.4 GHz WiFi radio (MediaTek) | infra | ❌ | `ra0` |
-| `rai[0-9]` | 5 GHz WiFi radio (MediaTek) | infra | ❌ | `rai0` |
-| `rax[0-9]` | 6 GHz WiFi radio (WiFi 6E) | infra | ❌ | `rax0` |
-| `apcli*` | WiFi client bridge (WISP) | user | ⚠️ label | `apcli0` |
-| `xfrm*`, `xfrms*` | IPsec xfrm state interfaces | infra | ❌ | `xfrms1` |
-| `tunl*` | IPv4 tunnel device | infra | ❌ | `tunl0` |
-| `ip6tnl*` | IPv6 tunnel device | infra | ❌ | `ip6tnl0` |
-| `sit*` | IPv6-in-IPv4 (SIT) | infra | ❌ | `sit0` |
-| `gre*` | GRE tunnel | infra | ❌ | `gre0` |
-| `vti*` | VPN tunnel interface | tunnel | ✅ | `vti0` |
+| `ipsec*` | Туннель IPsec | tunnel | ✅ | `ipsec0` |
+| `tun[0-9]*` | Обычное устройство TUN | tunnel | ✅ | `tun0` |
+| `tap*` | Обычное устройство TAP | tunnel | ✅ | `tap0` |
+| `wwan*` | Клиент Wi-Fi (WISP) | user | ⚠️ подпись | `wwan0` |
+| `usb*` | Раздача с USB | user | ⚠️ подпись | `usb0` |
+| `lo` | Петля | infra | ❌ | `lo` |
+| `ra[0-9]` | Радио Wi-Fi 2,4 ГГц (MediaTek) | infra | ❌ | `ra0` |
+| `rai[0-9]` | Радио Wi-Fi 5 ГГц (MediaTek) | infra | ❌ | `rai0` |
+| `rax[0-9]` | Радио Wi-Fi 6 ГГц (Wi-Fi 6E) | infra | ❌ | `rax0` |
+| `apcli*` | Клиентский мост Wi-Fi (WISP) | user | ⚠️ подпись | `apcli0` |
+| `xfrm*`, `xfrms*` | Интерфейсы состояния IPsec xfrm | infra | ❌ | `xfrms1` |
+| `tunl*` | Устройство туннеля IPv4 | infra | ❌ | `tunl0` |
+| `ip6tnl*` | Устройство туннеля IPv6 | infra | ❌ | `ip6tnl0` |
+| `sit*` | IPv6 внутри IPv4 (SIT) | infra | ❌ | `sit0` |
+| `gre*` | Туннель GRE | infra | ❌ | `gre0` |
+| `vti*` | Интерфейс VPN-туннеля | tunnel | ✅ | `vti0` |
 | `ethoip*` | EtherIP | infra | ❌ | `ethoip0` |
-| `dummy*` | Dummy device | infra | ❌ | `dummy0` |
+| `dummy*` | Фиктивное устройство | infra | ❌ | `dummy0` |
 | `ezcfg*` | EZConfig | infra | ❌ | `ezcfg0` |
-| `ifb*` | IFB (traffic shaping) | infra | ❌ | `ifb0` |
-| `*.N` | VLAN sub-interface | infra | ❌ | `eth2.1` |
+| `ifb*` | IFB (формирование трафика) | infra | ❌ | `ifb0` |
+| `*.N` | Подынтерфейс VLAN | infra | ❌ | `eth2.1` |
 
-**Legend:**
-- **Type:** `user` = user-facing WAN/LAN, `tunnel` = VPN/tunnel, `infra` = kernel/radio infrastructure
-- **Show in UI:** ✅ = always shown, ⚠️ label = shown only if NDM assigned a label, ❌ = blacklisted
+**Обозначения:**
+- **Тип:** `user` — WAN или LAN, с которым работает человек; `tunnel` — VPN или туннель; `infra` — ядро или радио
+- **Показ в UI:** ✅ — всегда; ⚠️ подпись — только если NDM дал имя; ❌ — в чёрном списке
 
-## Usage in Project
+Тот же набор префиксов туннеля используют проверка `tunnel-check.sh` и сторож `dns-tunnel-watch.sh`: `nwg*`, `awg*`, `wg` с цифрой, `ovpn*`, `tun` с цифрой, `tap*`, `sstp*`, `l2tp*`, `pptp*`, `ipsec*`, `gre*`, `vti*`.
 
-| Component | File | Purpose |
+## Где это используется
+
+| Компонент | Файл | Зачем |
 |-----------|------|---------|
-| Interface blacklist | `webui/lua/api-system.lua` → `M.interfaces()` | Excludes infra interfaces from API |
-| Tunnel detection | `lib/ip.sh` → `is_tunnel_iface()` | Classifies dev as tunnel for route-check / wan-paths |
-| UI tunnel check | `webui/static/shared.js` → `EW.isTunnelIface()` | Client-side tunnel classification for route diagram |
-| Config dropdowns | `webui/static/config-editor.js` | `iface_select` type populates from API |
+| Чёрный список интерфейсов | `webui/lua/api-system.lua` → `M.interfaces()` | Не отдаёт служебные интерфейсы в API |
+| Определение туннеля | `lib/ip.sh` → `is_tunnel_iface()` | Отличает туннель для route-check и wan-paths |
+| Проверка туннеля в UI | `webui/static/shared.js` → `EW.isTunnelIface()` | Та же классификация на схеме маршрута |
+| Списки в конфиге | `webui/static/config-editor.js` | Поле типа `iface_select` заполняется из API |

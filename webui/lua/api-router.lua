@@ -224,6 +224,21 @@ local function validate_mac(s)
     return nil
 end
 
+-- Diagnostic: /api/geo-split/ladder
+-- Keenetic priority ladder from show interface, show ping-check, and the
+-- kernel default route. No curl and no route changes.
+if uri == "/api/geo-split/ladder" then
+    local cmd = base .. '/geo-split/scripts/ladder.sh --json 2>&1'
+    local output, _, _ = run_cmd(cmd)
+    output = output:gsub("%s+$", "")
+    if output == "" or output:sub(1, 1) ~= "{" then
+        ngx.say('{"ok":false,"error":"script_error","message":"' .. json_escape(output ~= "" and output or "empty output") .. '"}')
+        return
+    end
+    ngx.say(output)
+    return
+end
+
 -- Diagnostic: /api/geo-split/tunnel-check[?dev=nwg0]
 -- Probes the default route when dev is omitted. Does not change routes.
 if uri == "/api/geo-split/tunnel-check" then
