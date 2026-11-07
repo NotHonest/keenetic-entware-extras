@@ -128,7 +128,7 @@ function renderHistoryPills(container, key, onCheck) {
 
     var label = document.createElement('span');
     label.className = 'rc-history__label';
-    label.textContent = 'History:';
+    label.textContent = 'Недавние:';
     container.appendChild(label);
 
     for (var i = 0; i < history.length; i++) {
@@ -218,8 +218,8 @@ function _createDiagModal(title, buildBody) {
 function _loadInterfaces(wrapEl) {
     // Build default dropdown immediately (Router + br0)
     _buildIfaceDropdown(wrapEl, [
-        { value: 'local', label: 'Router' },
-        { value: 'br0', label: 'Home network (br0)' }
+        { value: 'local', label: 'Роутер' },
+        { value: 'br0', label: 'Домашняя сеть (br0)' }
     ], 'br0');
 
     var ifacesP = EW.loadIfaceMap();
@@ -230,7 +230,7 @@ function _loadInterfaces(wrapEl) {
         var clData = results[1];
 
         // Build options: Nets (Router + LAN bridges), sorted alphabetically
-        var netOptions = [{ value: 'local', label: 'Router' }];
+        var netOptions = [{ value: 'local', label: 'Роутер' }];
         if (ifData && ifData.interfaces) {
             for (var j = 0; j < ifData.interfaces.length; j++) {
                 var ifc = ifData.interfaces[j];
@@ -241,7 +241,7 @@ function _loadInterfaces(wrapEl) {
             }
         }
         netOptions.sort(function(a, b) { return a.label.localeCompare(b.label); });
-        var options = [{ value: '', label: 'Nets', disabled: true, group: true }];
+        var options = [{ value: '', label: 'Сети', disabled: true, group: true }];
         for (var n = 0; n < netOptions.length; n++) options.push(netOptions[n]);
 
         // Add all clients split into online/offline, sorted alphabetically
@@ -258,11 +258,11 @@ function _loadInterfaces(wrapEl) {
                         clLabel = cl.name + ' \u2192 ' + devLabel;
                     } else {
                         // Tunnel unavailable (no route in policy table)
-                        clLabel = cl.name + ' \u2192 policy \u2b07';
+                        clLabel = cl.name + ' \u2192 политика \u2b07';
                     }
                 } else {
                     // Client without tunnel — uses connection policy
-                    clLabel = cl.name + ' \u2192 Policy';
+                    clLabel = cl.name + ' \u2192 политика';
                 }
                 var item = { value: cl.mac, label: clLabel };
                 if (cl.active) {
@@ -274,13 +274,13 @@ function _loadInterfaces(wrapEl) {
             activeClients.sort(function(a, b) { return a.label.localeCompare(b.label); });
             inactiveClients.sort(function(a, b) { return a.label.localeCompare(b.label); });
             if (activeClients.length) {
-                options.push({ value: '', label: 'Clients (online)', disabled: true, group: true });
+                options.push({ value: '', label: 'Устройства в сети', disabled: true, group: true });
                 for (var m = 0; m < activeClients.length; m++) {
                     options.push(activeClients[m]);
                 }
             }
             if (inactiveClients.length) {
-                options.push({ value: '', label: 'Clients (offline)', disabled: true, group: true });
+                options.push({ value: '', label: 'Устройства не в сети', disabled: true, group: true });
                 for (var p = 0; p < inactiveClients.length; p++) {
                     options.push(inactiveClients[p]);
                 }
@@ -361,7 +361,7 @@ function _renderExamples(container, examples, onCheck) {
     container.innerHTML = '';
     var label = document.createElement('span');
     label.className = 'rc-examples__label';
-    label.textContent = 'Try:';
+    label.textContent = 'Примеры:';
     container.appendChild(label);
 
     for (var i = 0; i < examples.length; i++) {
@@ -448,13 +448,13 @@ function _openCheckModal(opts) {
         if (opts.hasIface) {
             inputRow.innerHTML =
                 '<input type="text" class="rc-input" placeholder="' + opts.placeholder + '" autocomplete="off">' +
-                '<span class="rc-iface-label">from</span>' +
+                '<span class="rc-iface-label">откуда</span>' +
                 '<div class="rc-iface-wrap"></div>' +
-                '<button class="ndw-button ndw-button--toggle ndw-button--toggle-enabled ndw-button--small rc-check-btn" type="button">Check</button>';
+                '<button class="ndw-button ndw-button--toggle ndw-button--toggle-enabled ndw-button--small rc-check-btn" type="button">Проверить</button>';
         } else {
             inputRow.innerHTML =
                 '<input type="text" class="rc-input rc-input--wide" placeholder="' + opts.placeholder + '" autocomplete="off">' +
-                '<button class="ndw-button ndw-button--toggle ndw-button--toggle-enabled ndw-button--small rc-check-btn" type="button">Check</button>';
+                '<button class="ndw-button ndw-button--toggle ndw-button--toggle-enabled ndw-button--small rc-check-btn" type="button">Проверить</button>';
         }
         body.appendChild(inputRow);
 
@@ -481,7 +481,7 @@ function _openCheckModal(opts) {
         var checkAllBtn = document.createElement('button');
         checkAllBtn.className = 'ndw-button ndw-button--toggle ndw-button--small rc-check-all-btn';
         checkAllBtn.type = 'button';
-        checkAllBtn.textContent = '\u25b6\u00a0 Check All';
+        checkAllBtn.textContent = '\u25b6\u00a0 Проверить все';
 
         historyRow._checkAllBtn = checkAllBtn;
 
@@ -591,9 +591,9 @@ function _openCheckModal(opts) {
  */
 function openRouteCheckModal() {
     _openCheckModal({
-        title: '\ud83d\udd0d Route Check',
+        title: 'Проверка маршрута',
         type: 'route',
-        placeholder: 'Enter domain, IP or CIDR (e.g. github.com, 8.8.8.8, 5.0.0.0/8)',
+        placeholder: 'Домен, IP или подсеть: github.com, 8.8.8.8, 5.0.0.0/8',
         examples: ROUTE_EXAMPLES,
         historyKey: ROUTE_HISTORY_KEY,
         hasIface: true,
@@ -618,9 +618,9 @@ function openRouteCheckModal() {
  */
 function openDnsCheckModal() {
     _openCheckModal({
-        title: '\ud83d\udd0d DNS Check',
+        title: 'Проверка DNS',
         type: 'dns',
-        placeholder: 'Enter domain (e.g. github.com)',
+        placeholder: 'Домен, например github.com',
         examples: DNS_EXAMPLES,
         historyKey: DNS_HISTORY_KEY,
         hasIface: false,

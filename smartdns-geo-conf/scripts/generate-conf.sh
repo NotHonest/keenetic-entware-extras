@@ -66,6 +66,15 @@ generate_other_servers() {
 
 HEADER
 
+  # Set by dns-tunnel-watch.sh after the VPN misses two probes. Cleared after
+  # two successful probes. Direct servers are not kept in parallel: SmartDNS
+  # would race them against the tunnel and could accept a poisoned answer.
+  local force_direct=0
+  if [ -f /opt/var/run/smartdns-force-direct ]; then
+    force_direct=1
+    printf '# Tunnel unreachable: international DNS goes direct until it returns.\n\n' >> "$out"
+  fi
+
   for provider in $OTHER_DNS_PROVIDER; do
     local proto
     proto="$(get_other_prov "$provider" PROTO)"
@@ -94,7 +103,7 @@ HEADER
 
     # Determine interface flags
     local iface_list=""
-    if [ -n "$OTHER_DNS_INTERFACES" ]; then
+    if [ -n "$OTHER_DNS_INTERFACES" ] && [ "$force_direct" != 1 ]; then
       iface_list="$OTHER_DNS_INTERFACES"
     fi
 

@@ -84,7 +84,7 @@ var ticker = EW.createTicker(function(id, currentSeconds, extra) {
     if (!inner) return;
     // Only tick if status is currently success or caution (service is running)
     if (!inner.classList.contains('status--success') && !inner.classList.contains('status--caution')) return;
-    setStatus(id, (extra && extra.state) || "ok", "Running " + EW.formatUptimeStock(currentSeconds));
+    setStatus(id, (extra && extra.state) || "ok", "Работает " + EW.formatUptimeStock(currentSeconds));
 });
 
 /** Fast poller for geo-split during background updates. */
@@ -202,7 +202,7 @@ function fetchStatus(url, id, skipLoading) {
     }
 
     if (!skipLoading) {
-        setStatus(id, "loading", "Loading...");
+        setStatus(id, "loading", "Загрузка…");
     }
 
     var controller = new AbortController();
@@ -244,7 +244,7 @@ function fetchStatus(url, id, skipLoading) {
                 // New structured format
                 if (data.running && typeof data.enabled === 'boolean' && !data.enabled) {
                     // Process is running but user disabled the feature → grey "Disabled"
-                    setStatus(id, "stopped", "Disabled");
+                    setStatus(id, "stopped", "Выключено");
                     updateCardAccent(id, "stopped");
                 } else if (data.running) {
                     // Check badges: prefer checks map, fallback to detail boolean scan
@@ -253,19 +253,19 @@ function fetchStatus(url, id, skipLoading) {
                     var badgeState = hasFail ? "caution" : "ok";
                     var uptimeSecs = data.details && data.details.uptime;
                     if (uptimeSecs) {
-                        setStatus(id, badgeState, "Running " + EW.formatUptimeStock(uptimeSecs));
+                        setStatus(id, badgeState, "Работает " + EW.formatUptimeStock(uptimeSecs));
                     } else {
-                        setStatus(id, badgeState, "Running");
+                        setStatus(id, badgeState, "Работает");
                     }
                 } else {
                     // Distinguish: user disabled vs service crashed
                     if (typeof data.enabled === 'boolean' && data.enabled) {
                         // Should be running but isn't → real failure
-                        setStatus(id, "error", "Failed");
+                        setStatus(id, "error", "Сбой");
                         updateCardAccent(id, "error");
                     } else {
                         // Disabled by user or no enabled concept → neutral
-                        setStatus(id, "stopped", "Stopped");
+                        setStatus(id, "stopped", "Остановлено");
                         updateCardAccent(id, "stopped");
                     }
                 }
@@ -311,21 +311,21 @@ function fetchStatus(url, id, skipLoading) {
                 }
             } else if (data.output !== undefined) {
                 // Legacy text format (webui/status.sh)
-                setStatus(id, data.ok ? "ok" : "fail", data.ok ? "OK" : "Error");
+                setStatus(id, data.ok ? "ok" : "fail", data.ok ? "Ок" : "Ошибка");
                 updateCardAccent(id, data.ok ? "running" : "error");
                 var el = document.getElementById("details-" + id);
                 if (el) {
                     el.innerHTML = '<pre class="ew-details-pre">' + EW.escapeHtml(data.output) + '</pre>';
                 }
             } else if (data.error) {
-                setStatus(id, "error", "Script error");
+                setStatus(id, "error", "Ошибка скрипта");
                 updateCardAccent(id, "error");
                 var el2 = document.getElementById("details-" + id);
                 if (el2) {
                     el2.innerHTML = '<pre class="ew-details-pre ew-details-pre--error">' + EW.escapeHtml(data.error) + '</pre>';
                 }
             } else {
-                setStatus(id, "warn", "Unknown format");
+                setStatus(id, "warn", "Неизвестный ответ");
                 updateCardAccent(id, "caution");
             }
         })
@@ -343,7 +343,7 @@ function fetchStatus(url, id, skipLoading) {
             }
             // Stale expired or never had data — show neutral "stale" badge (not red error!)
             ticker.removeUptimeBaseline(id);
-            setStatus(id, "stale", "No data");
+            setStatus(id, "stale", "Нет данных");
             updateCardAccent(id, "stale");
         });
 }
@@ -437,7 +437,7 @@ function buildUI() {
     allTab.id = "tab-all";
     allTab.setAttribute("role", "tab");
     allTab.setAttribute("aria-selected", "true");
-    allTab.innerHTML = '<div class="ndw-tabs__tab__label">Summary</div>';
+    allTab.innerHTML = '<div class="ndw-tabs__tab__label">Обзор</div>';
     allTab.addEventListener("click", function() { switchTab("all"); });
     tabList.appendChild(allTab);
 
@@ -464,7 +464,7 @@ function buildUI() {
         var toggleHtml = '';
         if (svc.id !== 'webui') {
             toggleHtml =
-                '<label class="ew-toggle ew-card-toggle" title="Enable/Disable">' +
+                '<label class="ew-toggle ew-card-toggle" title="Включить или выключить">' +
                     '<input type="checkbox" id="toggle-' + svc.id + '" disabled>' +
                     '<span class="ew-toggle__bar"></span>' +
                 '</label>';
@@ -473,7 +473,7 @@ function buildUI() {
         var editBtnHtml = '';
         if (CONFIG_SCHEMAS[svc.id]) {
             editBtnHtml =
-                '<button class="ndw-button ndw-button--toggle ndw-button--toggle-enabled ndw-button--small ndw-button--no-text ew-edit-btn" data-tooltip="Edit Config" data-edit="' + svc.id + '">' +
+                '<button class="ndw-button ndw-button--toggle ndw-button--toggle-enabled ndw-button--small ndw-button--no-text ew-edit-btn" data-tooltip="Настройки" data-edit="' + svc.id + '">' +
                     '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>' +
                 '</button>';
         }
@@ -481,12 +481,12 @@ function buildUI() {
         var diagBtnHtml = '';
         if (svc.id === 'geo-split') {
             diagBtnHtml =
-                '<button class="ndw-button ndw-button--toggle ndw-button--toggle-enabled ndw-button--small ndw-button--no-text ew-diag-btn" data-tooltip="Route Check" data-diag="route">' +
+                '<button class="ndw-button ndw-button--toggle ndw-button--toggle-enabled ndw-button--small ndw-button--no-text ew-diag-btn" data-tooltip="Проверка маршрута" data-diag="route">' +
                     '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>' +
                 '</button>';
         } else if (svc.id === 'smartdns') {
             diagBtnHtml =
-                '<button class="ndw-button ndw-button--toggle ndw-button--toggle-enabled ndw-button--small ndw-button--no-text ew-diag-btn" data-tooltip="DNS Check" data-diag="dns">' +
+                '<button class="ndw-button ndw-button--toggle ndw-button--toggle-enabled ndw-button--small ndw-button--no-text ew-diag-btn" data-tooltip="Проверка DNS" data-diag="dns">' +
                     '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>' +
                 '</button>';
         }
@@ -518,7 +518,7 @@ function buildUI() {
                         return s;
                     })() +
                 '</div>' +
-                '<div class="ew-card-more"><a href="#' + svc.id + '" data-tab="' + svc.id + '">View details \u2192</a></div>' +
+                '<div class="ew-card-more"><a href="#' + svc.id + '" data-tab="' + svc.id + '">Подробнее \u2192</a></div>' +
             '</div>';
         cardsContainer.appendChild(card);
     });
@@ -682,7 +682,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 btn.classList.remove('ew-update-btn--spinning');
                 btn.disabled = false;
                 // Immediate feedback in field value
-                var _label = actionUrl.indexOf('flush') !== -1 ? '\u2713 Flushed ' : '\u2713 Updating\u2026 ';
+                var _label = actionUrl.indexOf('flush') !== -1 ? '\u2713 Очищено ' : '\u2713 Обновляю\u2026 ';
                 var _p = btn.parentNode;
                 if (_p) { for (var _n = _p.firstChild; _n; _n = _n.nextSibling) {
                     if (_n !== btn && (_n.nodeType === 3 || _n.nodeType === 1)) { _n.textContent = _label; break; }

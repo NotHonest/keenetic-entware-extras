@@ -219,11 +219,11 @@ function _renderError(container, data) {
     div.className = "route-diagram route-diagram--error";
     var title = document.createElement("div");
     title.className = "route-diagram__error-title";
-    title.textContent = "⚠ Diagnostic error";
+    title.textContent = "⚠ Ошибка проверки";
     div.appendChild(title);
     var msg = document.createElement("div");
     msg.className = "route-diagram__error-msg";
-    msg.textContent = data.error || data.message || "Unknown error";
+    msg.textContent = data.error || data.message || "Неизвестная ошибка";
     div.appendChild(msg);
     container.innerHTML = "";
     container.appendChild(div);
@@ -318,7 +318,7 @@ function _buildPaths(data) {
  */
 function renderRouteDiagram(container, data) {
     if (!data || data.ok === false) {
-        _renderError(container, data || { error: "No data" });
+        _renderError(container, data || { error: "Нет данных" });
         return;
     }
 
@@ -408,7 +408,7 @@ function renderRouteDiagram(container, data) {
     // Client — show client name (from --from MAC), "Router" when local, or generic "Client".
     // Truncate long names to fit SVG node width (~18 chars max).
     svg.appendChild(_useIcon("ico-client", clientX, clientY, ""));
-    var clientLabel = data.from_name || (data.source_iface ? "Client" : "Router");
+    var clientLabel = data.from_name || (data.source_iface ? "Клиент" : "Роутер");
     if (clientLabel.length > 18) clientLabel = clientLabel.substring(0, 16) + "\u2026";
     // Source sublabel: interface label when iif is set, empty when Router
     var sourceSublabel = data.source_iface
@@ -423,7 +423,7 @@ function renderRouteDiagram(container, data) {
     var dnsIconClass = dnsSkipped ? " route-icon--skipped" : " route-icon--primary";
     svg.appendChild(_useIcon("ico-dns", dnsX, dnsY, dnsIconClass));
     if (dnsSkipped) {
-        svg.appendChild(_svgText("skipped", dnsX, dnsY + 28, "route-node-sublabel"));
+        svg.appendChild(_svgText("пропущен", dnsX, dnsY + 28, "route-node-sublabel"));
     } else {
         // Show up to 3 IPs, then "+N more"
         var dnsLabelY = dnsY + 28;
@@ -433,13 +433,13 @@ function renderRouteDiagram(container, data) {
             dnsLabelY += 11;
         }
         if (dnsIps.length > 3) {
-            svg.appendChild(_svgText("+" + (dnsIps.length - 3) + " more", dnsX, dnsLabelY, "route-node-sublabel"));
+            svg.appendChild(_svgText("+" + (dnsIps.length - 3) + " ещё", dnsX, dnsLabelY, "route-node-sublabel"));
         }
     }
 
     // Router
     svg.appendChild(_useIcon("ico-router", routerX, routerY, ""));
-    svg.appendChild(_svgText("Router", routerX, routerY + 26, "route-node-label"));
+    svg.appendChild(_svgText("Роутер", routerX, routerY + 26, "route-node-label"));
 
     // Path nodes — two-icon model: globe (ISP/default) + shield (tunnel)
     // Globe icon always gray; shield icon always blue. Path lines carry the color.
@@ -457,7 +457,7 @@ function renderRouteDiagram(container, data) {
 
     // Internet cloud
     svg.appendChild(_useIcon("ico-cloud", internetX, internetY, ""));
-    svg.appendChild(_svgText("Internet", internetX, internetY + 22, "route-node-label"));
+    svg.appendChild(_svgText("Интернет", internetX, internetY + 22, "route-node-label"));
 
     // Internet → Server connection (always active — traffic reaches destination)
     svg.appendChild(_svgLine(internetX + 20, internetY, serverX - 12, serverY, "route-path--active"));
@@ -533,7 +533,7 @@ function _buildDnsGroups(data) {
  */
 function renderDnsDiagram(container, data) {
     if (!data || data.ok === false) {
-        _renderError(container, data || { error: "No data" });
+        _renderError(container, data || { error: "Нет данных" });
         return;
     }
 
@@ -608,15 +608,15 @@ function renderDnsDiagram(container, data) {
     // Domain (query) node — magnifying glass, distinct from the DNS-server icon
     // used below. Gray (neutral), same as Route Diagram's Client icon.
     svg.appendChild(_useIcon("ico-query", domainX, domainY, ""));
-    svg.appendChild(_svgText("Domain", domainX, domainY + 26, "route-node-label"));
+    svg.appendChild(_svgText("Домен", domainX, domainY + 26, "route-node-label"));
     svg.appendChild(_svgText(data.query || "", domainX, domainY + 38, "route-node-sublabel"));
 
     // Zone node — gray (neutral), same as Route Diagram's Router icon.
     svg.appendChild(_useIcon("ico-zone", zoneX, zoneY, ""));
-    svg.appendChild(_svgText("Zone", zoneX, zoneY + 26, "route-node-label"));
-    svg.appendChild(_svgText(zone.group || "default", zoneX, zoneY + 38, "route-node-sublabel"));
+    svg.appendChild(_svgText("Зона", zoneX, zoneY + 26, "route-node-label"));
+    svg.appendChild(_svgText(EW.labelToken(zone.group || "default"), zoneX, zoneY + 38, "route-node-sublabel"));
     if (data.dns_source === 'system') {
-        svg.appendChild(_svgText("(configured)", zoneX, zoneY + 50, "route-node-sublabel"));
+        svg.appendChild(_svgText("(как настроено)", zoneX, zoneY + 50, "route-node-sublabel"));
     }
 
     // DNS group branch nodes — one node per configured group (zone/default),
@@ -629,7 +629,7 @@ function renderDnsDiagram(container, data) {
         var b = branches[bi];
         var branchIconCls = b.matched ? " route-icon--primary" : "";
         svg.appendChild(_useIcon("ico-dns", branchX, by, branchIconCls));
-        svg.appendChild(_svgText(b.label, branchX, by + 27, "route-node-sublabel"));
+        svg.appendChild(_svgText(EW.labelToken(b.label), branchX, by + 27, "route-node-sublabel"));
         var provText = b.providers.join(", ");
         if (provText) {
             svg.appendChild(_svgText(provText, branchX, by + 39, "route-node-sublabel"));
@@ -638,12 +638,12 @@ function renderDnsDiagram(container, data) {
 
     // Result node — gray (neutral), same as Route Diagram's Server icon.
     svg.appendChild(_useIcon("ico-result", resultX, resultY, ""));
-    svg.appendChild(_svgText("Result", resultX, resultY + 26, "route-node-label"));
+    svg.appendChild(_svgText("Результат", resultX, resultY + 26, "route-node-label"));
     var ips = (result.ips || []);
     if (ips.length > 0) {
         svg.appendChild(_svgText(ips[0], resultX, resultY + 38, "route-node-sublabel"));
         if (ips.length > 1) {
-            svg.appendChild(_svgText("+" + (ips.length - 1) + " more", resultX, resultY + 50, "route-node-sublabel"));
+            svg.appendChild(_svgText("+" + (ips.length - 1) + " ещё", resultX, resultY + 50, "route-node-sublabel"));
         }
     }
     var meta = [];

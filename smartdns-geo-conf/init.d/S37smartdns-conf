@@ -96,6 +96,12 @@ do_disable_s38() {
   fi
 }
 
+# Make sure the tunnel-down DNS fallback is on the crontab. Idempotent.
+do_install_dns_watch() {
+  local _watch="$BASE/scripts/dns-tunnel-watch.sh"
+  [ -x "$_watch" ] && "$_watch" install || true
+}
+
 # Restart SmartDNS via S38 (background, non-blocking)
 do_restart_s38() {
   if [ -x "$S38" ]; then
@@ -124,6 +130,7 @@ case "${1:-}" in
       do_bind_addrs
       do_generate
       do_activate
+      do_install_dns_watch
     else
       # Disabled: ensure S38 won't start (rename before rc.unslung reaches S38)
       do_disable_s38
@@ -137,6 +144,7 @@ case "${1:-}" in
     do_generate
     do_activate
     do_restart_s38
+    do_install_dns_watch
     ;;
   enable)
     mkdir -p "$(dirname "$STATE_FILE")"
@@ -146,6 +154,7 @@ case "${1:-}" in
     do_generate
     do_activate
     do_restart_s38
+    do_install_dns_watch
     do_start_redirect
     echo "SmartDNS: split-DNS enabled (zone: $DNS_ZONE)"
     ;;

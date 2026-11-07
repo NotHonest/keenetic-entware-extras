@@ -1,6 +1,7 @@
 // config-schemas.js — Config field definitions (pure data) for Entware Extras WebUI.
 // Extracted from config-editor.js for maintainability.
 // No dependencies. Referenced by: config-editor.js, app.js (buildUI).
+// Visible labels are Russian. Config keys and stored values stay as-is.
 "use strict";
 
 // ── Config Schemas ───────────────────────────────────────────────────────────
@@ -8,82 +9,82 @@
 /** Config field definitions per service (schema for form rendering). */
 var CONFIG_SCHEMAS = {
     'geo-split': [
-        { key: 'GEO_ZONE', label: 'GeoIP Zone', type: 'zone_selector',
-          desc: 'GeoIP zone for subnet routing: select countries or a geopolitical union (expands to multiple countries). All 240 country zones pre-packaged.' },
-        { key: 'ROUTE_IN', label: 'Source Interfaces', type: 'iface_select', hint: 'LAN/tunnel interfaces for policy rules',
-          desc: 'Source LAN/tunnel interfaces for ip rule iif (space-separated). Each interface gets its own ip rule \u2192 custom route table.' },
-        { key: 'ROUTE_OUT', label: 'Outgoing Interface', type: 'iface_select', multi: false, hint: 'Target outgoing interface for matched GEO traffic',
-          preItems: [{ value: 'auto', label: 'Auto (ISP detect)' }],
-          desc: '"auto" or empty = detect ISP automatically from default route. Explicit: "lte_br1" (ISP), "nwg0" (tunnel), "ppp0", etc.' },
-        { key: 'ROUTE_GW', label: 'Gateway', type: 'radio_text', hint: 'Gateway (nexthop) for routes in geo-split tables',
-          presets: [{ value: 'auto', label: 'Auto (from route)' }, { value: 'none', label: 'None (dev-only)' }],
-          desc: '"auto" = detect from default route of ROUTE_OUT interface. On point-to-point interfaces (LTE/PPP) auto returns empty \u2192 routes without gateway (correct for those types).' },
-        { key: 'SUBNET_LOADER', label: 'Subnet Loader', type: 'select',
-          options: [{ value: 'cidr-plain', label: 'CIDR Plain' }, { value: 'ripe-json', label: 'RIPE JSON (requires jq)' }],
-          hint: 'Format parser for downloaded list',
-          desc: 'Available loaders: cidr-plain (default, one CIDR per line), ripe-json (RIPE stat JSON, requires jq).' },
-        { key: 'SUBNET_URL', label: 'Subnet URL Override', type: 'text', hint: 'Empty = use GEO_ZONE (recommended)',
-          desc: 'Override URL: if set, ignores GEO_ZONE and downloads this single URL directly. Leave empty to use GEO_ZONE (recommended).' },
-        { key: 'SUBNET_AGGREGATE', label: 'Aggregate CIDRs', type: 'toggle', on: '1', off: '0', hint: 'Merge adjacent subnets \u2192 fewer routes',
-          desc: 'Aggregate (merge) adjacent/overlapping CIDR subnets after download. Reduces route entries count.' },
-        { key: 'DOWNLOAD_INTERFACES', label: 'Download Interfaces', type: 'iface_select', hint: 'Interfaces for subnet/zone downloads',
-          preItems: [{ value: 'default', label: 'Default route' }, { value: '*', label: 'All Tunnels (*)' }],
-          desc: 'Outgoing interfaces to try for downloads (in order). "default" = system default route. "*" = auto-detect all active tunnel interfaces.' },
-        { key: 'DOMAINS_UPDATE_INTERVAL', label: 'Domain Update Interval', type: 'number', min: 0, hint: 'Seconds (0 = disable)',
-          desc: 'Controls how often geo-split re-resolves domains and updates routes. Lower = faster reaction to CDN IP changes; higher = fewer DNS queries.' },
-        { key: 'DNS_FULL_RESOLVER_PORT', label: 'DNS Resolver Port', type: 'text', hint: 'Empty = auto-detect',
-          desc: 'DNS resolver port for full A-record resolution (all IPs, no speed-check). Empty = auto-detect (probe localhost:6153, then :6053, then system resolver).' },
-        { key: 'MAX_CACHE_AGE', label: 'Subnet Cache TTL', type: 'number', min: 0, hint: 'Seconds (default 604800 = 7 days)',
-          desc: 'Max age of cached subnet list in seconds. After expiry, subnets are re-downloaded on next start/update.' }
+        { key: 'GEO_ZONE', label: 'Зона', type: 'zone_selector',
+          desc: 'Какие страны идут через выбранный выход. Союз раскрывается в несколько стран. Для домашнего сценария оставьте ЕАЭС.' },
+        { key: 'ROUTE_IN', label: 'Сегменты', type: 'iface_select', hint: 'Где действует правило',
+          desc: 'Сети, для которых строятся отдельные маршруты. Домашняя сеть — br0. Сегмент пылесоса сюда не добавляйте, если он должен ходить своим маршрутом.' },
+        { key: 'ROUTE_OUT', label: 'Куда идёт зона', type: 'iface_select', multi: false, hint: 'Выход для сайтов выбранной зоны',
+          preItems: [{ value: 'auto', label: 'Авто (как основной маршрут)' }],
+          desc: '«Авто» повторяет основной маршрут Keenetic. Если основной маршрут — VPN, зона тоже уйдёт в VPN. Для сценария «ЕАЭС напрямую» укажите интерфейс провайдера, например ММТ.' },
+        { key: 'ROUTE_GW', label: 'Шлюз', type: 'radio_text', hint: 'Обычно оставьте авто', advanced: true,
+          presets: [{ value: 'auto', label: 'Авто' }, { value: 'none', label: 'Без шлюза' }],
+          desc: 'Авто берёт шлюз с маршрута выбранного выхода. На LTE и PPP шлюз не нужен, маршрут пойдёт через сам интерфейс.' },
+        { key: 'SUBNET_LOADER', label: 'Формат списков', type: 'select', advanced: true,
+          options: [{ value: 'cidr-plain', label: 'Простой список CIDR' }, { value: 'ripe-json', label: 'RIPE JSON (нужен jq)' }],
+          hint: 'Как читать скачанный список подсетей',
+          desc: 'Простой список — одна подсеть на строку. RIPE JSON нужен только если список в формате RIPE и на роутере есть jq.' },
+        { key: 'SUBNET_URL', label: 'Свой адрес списка', type: 'text', hint: 'Пусто — брать зону выше', advanced: true,
+          desc: 'Если заполнено, зона игнорируется и скачивается только этот адрес. Для обычной работы оставьте пустым.' },
+        { key: 'SUBNET_AGGREGATE', label: 'Склеивать подсети', type: 'toggle', on: '1', off: '0', hint: 'Меньше записей в таблице', advanced: true,
+          desc: 'Соседние подсети объединяются после загрузки. Маршрутов становится меньше.' },
+        { key: 'DOWNLOAD_INTERFACES', label: 'Откуда качать списки', type: 'iface_select', hint: 'Интерфейсы по порядку', advanced: true,
+          preItems: [{ value: 'default', label: 'Основной маршрут' }, { value: '*', label: 'Все VPN (*)' }],
+          desc: 'Через какие интерфейсы пробовать скачать списки. «Основной маршрут» — то, что сейчас выбрано в Keenetic. «Все VPN» — все поднятые туннели.' },
+        { key: 'DOMAINS_UPDATE_INTERVAL', label: 'Как часто обновлять домены', type: 'number', min: 0, hint: 'Секунды, 0 — не обновлять', advanced: true,
+          desc: 'Как часто заново узнавать адреса доменов из списка. Меньше — быстрее реакция на смену адресов CDN, больше — меньше запросов DNS.' },
+        { key: 'DNS_FULL_RESOLVER_PORT', label: 'Порт DNS', type: 'text', hint: 'Пусто — найти самому', advanced: true,
+          desc: 'Куда спрашивать все адреса домена. Пусто: сначала порт 6153, потом 6053, потом системный DNS роутера.' },
+        { key: 'MAX_CACHE_AGE', label: 'Срок жизни списка подсетей', type: 'number', min: 0, hint: 'Секунды, по умолчанию 7 дней', advanced: true,
+          desc: 'Через сколько секунд список подсетей считается устаревшим и скачивается заново.' }
     ],
     'smartdns': [
-        { key: 'DNS_ZONE', label: 'DNS Zone', type: 'zone_selector',
-          desc: 'DNS zone preset: select countries or a geopolitical union (expands to multiple countries).' },
-        { key: 'ZONE_DNS_PROVIDER', label: 'Zone DNS Provider', type: 'multi_select',
+        { key: 'DNS_ZONE', label: 'Зона DNS', type: 'zone_selector',
+          desc: 'Для каких стран использовать отдельный DNS. Союз раскрывается в несколько стран.' },
+        { key: 'ZONE_DNS_PROVIDER', label: 'DNS для зоны', type: 'multi_select',
           dynamicOptions: 'zone',
-          hint: 'Upstream DNS for zone group',
-          desc: 'DNS provider(s) for zone/regional group. Select one or more. Resolves zone domains (ccTLDs + CDN-optimized services).' },
-        { key: 'ZONE_DNS_INTERFACE', label: 'Zone Tunnel Interface', type: 'iface_select', multi: false, hint: 'Default = ISP direct',
-          desc: 'Outgoing interface for zone DNS (Yandex/AdGuard). Default = ISP direct. Usually unchanged — MITM does not affect.' },
-        { key: 'OTHER_DNS_PROVIDER', label: 'Other DNS Provider', type: 'multi_select',
+          hint: 'Кто отвечает за сайты зоны',
+          desc: 'Один или несколько DNS для доменов выбранной зоны.' },
+        { key: 'ZONE_DNS_INTERFACE', label: 'Выход DNS зоны', type: 'iface_select', multi: false, hint: 'Обычно напрямую через провайдера',
+          desc: 'Через какой интерфейс ходят запросы DNS зоны. Обычно это провайдер, не VPN.' },
+        { key: 'OTHER_DNS_PROVIDER', label: 'DNS для остальных', type: 'multi_select',
           dynamicOptions: 'other',
-          hint: 'Upstream DNS for default group',
-          desc: 'DNS provider(s) for international/default group. Select one or more. Resolves all non-zone domains.' },
-        { key: 'OTHER_DNS_INTERFACES', label: 'International Tunnel Interfaces', type: 'iface_select', hint: 'Default = ISP direct',
-          desc: 'Outgoing interfaces for international DNS. When set, all DNS goes through tunnel only — no direct fallback (privacy by design).' },
-        { key: 'DNS_TRANSPORT', label: 'DNS Transport', type: 'select',
-          options: [{ value: 'auto', label: 'Auto (DoT/DoH + UDP fallback)' }, { value: 'strict', label: 'Strict (DoT/DoH only, no UDP)' }],
-          hint: 'Upstream DNS encryption policy',
-          desc: 'Auto: DoT/DoH preferred with UDP fallback for zone providers (Yandex, AliDNS). Strict: DoT/DoH only — all DNS queries encrypted, no plain UDP. Use Strict when DNS privacy matters (e.g., abroad with non-local ISP).' }
+          hint: 'Кто отвечает за зарубежные сайты',
+          desc: 'Один или несколько DNS для доменов вне зоны.' },
+        { key: 'OTHER_DNS_INTERFACES', label: 'Выход зарубежного DNS', type: 'iface_select', hint: 'Обычно через VPN',
+          desc: 'Через какие интерфейсы спрашивать зарубежный DNS. Пока туннель отвечает, прямого сервера рядом нет: иначе быстрый ответ провайдера мог бы победить. Если туннель молчит пару минут, запросы временно идут напрямую и возвращаются в туннель, когда он снова отвечает.' },
+        { key: 'DNS_TRANSPORT', label: 'Шифрование DNS', type: 'select',
+          options: [{ value: 'auto', label: 'Авто (DoT/DoH, запасной UDP)' }, { value: 'strict', label: 'Только DoT/DoH, без UDP' }],
+          hint: 'Можно ли спрашивать обычный DNS',
+          desc: 'Авто предпочитает шифрованный DNS и оставляет обычный UDP как запасной. Строгий режим не отправляет открытые запросы.' }
     ],
     'smartdns-redirect': [
-        { key: 'UPSTREAM_PORT', label: 'Upstream Port', type: 'number', min: 1, max: 65535, hint: 'SmartDNS=6053, AGH=5353, Unbound=5335',
-          desc: 'Port to redirect DNS traffic to (local DNS on router).' },
-        { key: 'INTERFACES', label: 'Interfaces', type: 'iface_select', hint: 'LAN interfaces to intercept DNS on',
-          desc: 'Interfaces to intercept (space-separated). Typical: "br0" for LAN. Add "br1" for Guest VLAN.' },
-        { key: 'REDIRECT_MODE', label: 'Redirect Mode', type: 'select',
-          options: [{ value: 'force', label: 'Force (intercept all DNS + block DoT)' }, { value: 'local', label: 'Local (only router-targeted DNS)' }],
-          hint: 'Force = full interception | Local = permissive',
-          desc: 'Force: intercepts ALL :53 DNS + blocks DoT :853. Clients cannot bypass SmartDNS. Local: intercepts only DNS to router IP. External DNS (8.8.8.8:53) and DoT (:853) pass through. For IoT devices or corporate laptops with hardcoded DNS.' },
-        { key: 'WATCHDOG_SERVICE', label: 'Watchdog Service', type: 'text', hint: 'e.g. S38smartdns',
-          desc: 'Restart upstream DNS service if unresponsive. Set to service name (e.g., "S38smartdns") or leave empty to disable.' },
-        { key: 'PRESERVE_FILTER_PROFILES', label: 'Preserve Filter Profiles', type: 'toggle', hint: 'Not yet implemented',
-          desc: 'When enabled: MACs bound via Keenetic parental-control filters are excluded from DNAT.' }
+        { key: 'UPSTREAM_PORT', label: 'Порт DNS на роутере', type: 'number', min: 1, max: 65535, hint: 'SmartDNS 6053, AGH 5353, Unbound 5335',
+          desc: 'На какой локальный порт направлять перехваченные запросы DNS.' },
+        { key: 'INTERFACES', label: 'Сегменты', type: 'iface_select', hint: 'Где перехватывать DNS',
+          desc: 'Обычно br0, домашняя сеть. br1 добавляйте только если этот сегмент тоже должен спрашивать DNS роутера.' },
+        { key: 'REDIRECT_MODE', label: 'Режим', type: 'select',
+          options: [{ value: 'force', label: 'Перехватывать весь DNS и блокировать DoT' }, { value: 'local', label: 'Только запросы к роутеру' }],
+          hint: 'Полный перехват или только запросы к роутеру',
+          desc: 'Полный режим забирает все запросы на порт 53 и блокирует DoT на 853. Мягкий режим трогает только DNS, адресованный роутеру: 8.8.8.8 и DoT проходят мимо.' },
+        { key: 'WATCHDOG_SERVICE', label: 'Служба для перезапуска', type: 'text', hint: 'Например S38smartdns',
+          desc: 'Если DNS на роутере замолчит, перезапустить эту службу. Пусто — не перезапускать.' },
+        { key: 'PRESERVE_FILTER_PROFILES', label: 'Не трогать профили фильтра', type: 'toggle', hint: 'Пока не работает',
+          desc: 'Задумано так: устройства с профилем фильтра Keenetic не попадают под перехват. Сейчас настройка ничего не меняет.' }
     ],
     'webui': [
-        { key: 'LISTEN_PORT', label: 'Listen Port', type: 'number', min: 1, max: 65535, hint: 'Page reloads after save!',
-          desc: 'Listen port for nginx-webui. Changing this will make the page reload on the new port.' },
-        { key: 'INJECT_SIDEBAR', label: 'Inject Sidebar', type: 'toggle', on: '1', off: '0', hint: 'Stock Keenetic menu patch',
-          desc: 'When 1: adds "Entware Extras" group with pages into the stock Keenetic sidebar. When 0: stock sidebar untouched.' },
-        { key: 'DASH_POLL_INTERVAL', label: 'Poll Interval', type: 'number', min: 1000, hint: 'Milliseconds',
-          desc: 'Dashboard auto-refresh polling interval in milliseconds. Lower = more responsive but more traffic.' }
+        { key: 'LISTEN_PORT', label: 'Порт панели', type: 'number', min: 1, max: 65535, hint: 'После сохранения страница откроется заново',
+          desc: 'Порт nginx этой панели. После смены страница перезагрузится уже на новом порту.' },
+        { key: 'INJECT_SIDEBAR', label: 'Пункт в меню Keenetic', type: 'toggle', on: '1', off: '0', hint: 'Добавляет раздел в обычное меню',
+          desc: '1 — в боковом меню Keenetic появляется раздел «Маршруты». 0 — меню роутера без изменений.' },
+        { key: 'DASH_POLL_INTERVAL', label: 'Как часто обновлять', type: 'number', min: 1000, hint: 'Миллисекунды',
+          desc: 'Как часто карточка на главной Keenetic спрашивает состояние. Меньше — отзывчивее и больше запросов.' }
     ]
 };
 
 /** Labels for modal title per service. */
 var CONFIG_LABELS = {
-    'geo-split': 'Geo-Split',
-    'smartdns': 'SmartDNS Geo-Config',
-    'smartdns-redirect': 'DNS Redirect',
-    'webui': 'WebUI'
+    'geo-split': 'Разделение по странам',
+    'smartdns': 'DNS по зонам',
+    'smartdns-redirect': 'Перехват DNS',
+    'webui': 'Панель'
 };

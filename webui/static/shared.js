@@ -6,10 +6,10 @@ window.EW = (function() {
 
     /** Service registry — single source of truth for IDs, labels, URLs, API endpoints. */
     var SERVICE_APIS = [
-        { id: 'geo-split',         label: 'Geo-Split',       desc: 'Policy-based geographic split routing',      url: '/custom/#geo-split',        api: '/api/geo-split/status' },
-        { id: 'smartdns',          label: 'SmartDNS Geo-Config',  desc: 'Geo-zone DNS splitting (configurable zones)', url: '/custom/#smartdns',          api: '/api/smartdns/status' },
-        { id: 'smartdns-redirect', label: 'DNS Redirect',     desc: 'Transparent DNS redirect for local networks', url: '/custom/#smartdns-redirect', api: '/api/smartdns-redirect/status' },
-        { id: 'webui',             label: 'WebUI',            desc: 'Entware Extras web dashboard',               url: '/custom/#webui',             api: '/api/webui/status' },
+        { id: 'geo-split',         label: 'Разделение по странам', desc: 'Сайты выбранной зоны идут через провайдера, остальное — по основному маршруту Keenetic', url: '/custom/#geo-split',        api: '/api/geo-split/status' },
+        { id: 'smartdns',          label: 'DNS по зонам',     desc: 'Разные DNS для своих и зарубежных сайтов', url: '/custom/#smartdns',          api: '/api/smartdns/status' },
+        { id: 'smartdns-redirect', label: 'Перехват DNS',     desc: 'Домашние устройства спрашивают DNS у роутера', url: '/custom/#smartdns-redirect', api: '/api/smartdns-redirect/status' },
+        { id: 'webui',             label: 'Панель',           desc: 'Эта страница',                           url: '/custom/#webui',             api: '/api/webui/status' },
     ];
 
     /** Detail keys whose numeric values are seconds — formatted and live-ticked. */
@@ -21,8 +21,8 @@ window.EW = (function() {
     var UPDATE_ACTIONS = {
         'geo_zone':       '/api/geo-split/update-subnets',
         'domain_sources': '/api/geo-split/update-domains',
-        'smartdns:cache': { url: '/api/smartdns/flush-cache', tooltip: 'Flush DNS Cache' },
-        'webui:cache':    { url: '/api/webui/flush-cache', tooltip: 'Flush UI Cache' }
+        'smartdns:cache': { url: '/api/smartdns/flush-cache', tooltip: 'Очистить кэш DNS' },
+        'webui:cache':    { url: '/api/webui/flush-cache', tooltip: 'Очистить кэш панели' }
     };
 
     /** Detail keys whose string values contain Linux device names.
@@ -42,7 +42,19 @@ window.EW = (function() {
 
     /** Special config keywords that look like device names but aren't.
      *  Mapped to human labels for UI display. */
-    var IFACE_SPECIAL = { 'auto': 'Auto (ISP detect)', 'default': 'Default route', 'direct': 'Direct (ISP)', '*': 'All VPNs (*)' };
+    var IFACE_SPECIAL = { 'auto': 'Авто (как основной маршрут)', 'default': 'Основной маршрут', 'direct': 'Напрямую (провайдер)', '*': 'Все VPN (*)' };
+
+    /** Keenetic stock descriptions that stay English in the interface list. */
+    var STOCK_IFACE_LABELS = {
+        'Home network': 'Домашняя сеть',
+        'Home': 'Домашняя сеть',
+        'Guest network': 'Гостевая сеть',
+        'Guest': 'Гостевая сеть'
+    };
+
+    function _stockIfaceLabel(label) {
+        return STOCK_IFACE_LABELS[label] || label;
+    }
 
     /**
      * Eagerly load interface label map from backend.
@@ -101,7 +113,7 @@ window.EW = (function() {
         var map = window._ewIfaceMap;
         var label = (map && map[dev]) ? map[dev] : null;
         if (!label && map && isTunnelIface(dev)) _scheduleIfaceMapReload();
-        return label ? label + ' (' + dev + ')' : dev;
+        return label ? _stockIfaceLabel(label) + ' (' + dev + ')' : dev;
     }
 
     /**
@@ -114,7 +126,7 @@ window.EW = (function() {
         if (!dev) return '';
         if (IFACE_SPECIAL[dev]) return IFACE_SPECIAL[dev];
         var map = window._ewIfaceMap;
-        if (map && map[dev]) return map[dev];
+        if (map && map[dev]) return _stockIfaceLabel(map[dev]);
         if (map && isTunnelIface(dev)) _scheduleIfaceMapReload();
         return dev;
     }
@@ -198,7 +210,7 @@ window.EW = (function() {
      * @returns {string}
      */
     function _humanizeGateway(val) {
-        if (val === 'scope link') return 'Direct (scope link)';
+        if (val === 'scope link') return 'напрямую';
         if (val === 'none') return '\u2014';
         return val;
     }
@@ -238,10 +250,134 @@ window.EW = (function() {
                   ('0' + mins).slice(-2) + ':' +
                   ('0' + secs).slice(-2);
         if (days > 0) {
-            return days + (days === 1 ? ' DAY ' : ' DAYS ') + hms;
+            return days + ' дн. ' + hms;
         }
         return hms;
     }
+
+    /** Whole status values. Applied only when the entire token matches. */
+    var VALUE_LABELS = {
+        idle: 'ждёт',
+        running: 'идёт',
+        force: 'полный перехват',
+        local: 'только к роутеру',
+        isp: 'провайдер',
+        tunnel: 'VPN',
+        dnat: 'перенаправление',
+        reject: 'запрет',
+        none: 'нет',
+        'cidr-plain': 'простой список',
+        'ripe-json': 'RIPE JSON',
+        auto: 'авто',
+        unknown: 'неизвестно',
+        direct: 'напрямую',
+        'default': 'по умолчанию',
+        'geo-split': 'ЕАЭС',
+        geo: 'ЕАЭС',
+        mixed: 'смесь',
+        policy: 'политика',
+        error: 'ошибка',
+        ERROR: 'ошибка',
+        host: 'домен',
+        domain: 'домен',
+        subnet: 'подсеть',
+        subnets: 'подсети',
+        domains: 'домены',
+        main: 'основная',
+        ccTLD: 'домен страны',
+        eas: 'ЕАЭС',
+        ru: 'Россия',
+        by: 'Беларусь',
+        kz: 'Казахстан',
+        am: 'Армения',
+        kg: 'Киргизия',
+        zone: 'зона',
+        other: 'остальные',
+        'System DNS': 'Системный DNS'
+    };
+
+    /**
+     * Translate a whole status token. Leaves unknown text unchanged.
+     * A "token via rest" value translates only the token. A string of
+     * space-separated known tokens translates every token. Anything else,
+     * including sentences, stays as written.
+     * @param {*} val
+     * @returns {*}
+     */
+    function labelToken(val) {
+        if (val == null || typeof val !== 'string') return val;
+        if (Object.prototype.hasOwnProperty.call(VALUE_LABELS, val)) return VALUE_LABELS[val];
+        var viaAt = val.indexOf(' via ');
+        if (viaAt > 0 && Object.prototype.hasOwnProperty.call(VALUE_LABELS, val.slice(0, viaAt))) {
+            return VALUE_LABELS[val.slice(0, viaAt)] + ' через ' + val.slice(viaAt + 5);
+        }
+        if (val.indexOf(' ') !== -1 && val.indexOf('\n') === -1 && val.indexOf(':') === -1 && val.indexOf('/') === -1) {
+            var parts = val.split(' ');
+            var out = [];
+            for (var i = 0; i < parts.length; i++) {
+                if (!parts[i]) continue;
+                if (!Object.prototype.hasOwnProperty.call(VALUE_LABELS, parts[i])) return val;
+                out.push(VALUE_LABELS[parts[i]]);
+            }
+            if (out.length) return out.join(', ');
+        }
+        if (/ domains$/.test(val)) return val.replace(/ domains$/, ' домены');
+        if (/ subnets$/.test(val)) return val.replace(/ subnets$/, ' подсети');
+        return val;
+    }
+
+    /** Russian labels for status detail keys. Unknown keys stay Title Case. */
+    var KEY_LABELS = {
+        geo_zone: 'Зона',
+        active_zones: 'Страны',
+        zone_loader: 'Загрузчик',
+        route_in: 'Сегменты',
+        route_out: 'ЕАЭС через',
+        route_out_type: 'Тип выхода',
+        gateway: 'Шлюз',
+        subnets: 'Подсети',
+        domains: 'Домены',
+        rules: 'Правила',
+        subnet_freshness: 'Свежесть подсетей',
+        domain_freshness: 'Свежесть доменов',
+        domain_sources: 'Источники доменов',
+        domain_cache: 'Кэш доменов',
+        dns_resolver: 'DNS',
+        ndm_hook: 'Хук Keenetic',
+        cron: 'Расписание',
+        background: 'Фон',
+        uptime: 'Работает',
+        version: 'Версия',
+        dns_zone: 'Зона DNS',
+        zone_dns_providers: 'DNS зоны',
+        other_dns_providers: 'DNS остальных',
+        other_interfaces: 'Интерфейсы остальных',
+        zone_interface: 'Интерфейс зоны',
+        ports: 'Порты',
+        servers: 'Серверы',
+        custom_providers: 'Свои DNS',
+        cache: 'Кэш',
+        memory: 'Память',
+        pid: 'Процесс',
+        redirect_mode: 'Режим',
+        interfaces: 'Интерфейсы',
+        ipv6: 'IPv6',
+        dnat_target: 'Куда уходит DNS',
+        dnat_target_v6: 'Куда уходит DNS (IPv6)',
+        upstream: 'Выше по цепочке',
+        name: 'Имя',
+        status: 'Состояние',
+        init: 'Автозапуск',
+        firmware: 'Прошивка',
+        patch_set: 'Патч',
+        patch_enum: 'Патчи',
+        config: 'Конфиг',
+        lua_module: 'Модуль Lua',
+        http: 'HTTP',
+        logrotate: 'Ротация логов',
+        depends_on: 'Зависит от',
+        action: 'Действие'
+    };
 
     /**
      * Format a snake_case key as Title Case label.
@@ -249,6 +385,7 @@ window.EW = (function() {
      * @returns {string}
      */
     function formatKey(key) {
+        if (KEY_LABELS[key]) return KEY_LABELS[key];
         return key.replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
     }
 
@@ -258,7 +395,7 @@ window.EW = (function() {
      * @returns {string}
      */
     function formatBool(val) {
-        return val ? 'Ok' : 'Fail';
+        return val ? 'Ок' : 'Сбой';
     }
 
     /**
@@ -411,10 +548,12 @@ window.EW = (function() {
             if (strVal.indexOf('\n') !== -1) {
                 lines = strVal.split('\n').map(function(line) {
                     if (line.charAt(0) === '!') {
-                        return { text: line.substring(1), isError: isRunning };
+                        return { text: labelToken(line.substring(1)), isError: isRunning };
                     }
-                    return { text: line, isError: false };
+                    return { text: labelToken(line), isError: false };
                 });
+            } else if (!isTimer) {
+                strVal = labelToken(strVal);
             }
 
             var actionCfg = (opts.serviceId ? UPDATE_ACTIONS[opts.serviceId + ':' + key] : null) || UPDATE_ACTIONS[key] || null;
@@ -423,10 +562,10 @@ window.EW = (function() {
             if (actionCfg) {
                 if (typeof actionCfg === 'string') {
                     updateUrl = actionCfg;
-                    updateTooltip = 'Force Reload';
+                    updateTooltip = 'Обновить';
                 } else {
                     updateUrl = actionCfg.url;
-                    updateTooltip = actionCfg.tooltip || 'Force Reload';
+                    updateTooltip = actionCfg.tooltip || 'Обновить';
                 }
             }
 
@@ -434,7 +573,7 @@ window.EW = (function() {
             var shortValue = null;
             if (showDev && IFACE_DETAIL_KEYS[key] && typeof rawVal === 'string') {
                 var sv = _humanizeIfaceDetail(key, rawVal, false);
-                if (sv !== rawVal) shortValue = String(sv).replace(/\n/g, ', ');
+                if (sv !== rawVal) shortValue = labelToken(String(sv).replace(/\n/g, ', '));
             }
 
             entries.push({
@@ -542,10 +681,10 @@ window.EW = (function() {
         var checks = (opts && opts.dnsServerChecks) || [];
 
         // Ok/Fail icons
-        if (e.value === 'Ok') {
+        if (e.value === 'Ok' || e.value === 'Ок') {
             return '<span class="ew-bool-icon ew-bool-icon--ok">\u2713</span>';
         }
-        if (e.value === 'Fail') {
+        if (e.value === 'Fail' || e.value === 'Сбой') {
             return '<span class="ew-bool-icon ew-bool-icon--fail">\u2717</span>';
         }
 
@@ -605,7 +744,7 @@ window.EW = (function() {
      */
     function renderUpdateBtn(e) {
         if (!e.updateAction) return '';
-        var tooltip = e.updateTooltip || 'Force Reload';
+        var tooltip = e.updateTooltip || 'Обновить';
         return ' <button class="ew-update-btn" data-action="' + e.updateAction + '" data-tooltip="' + escapeHtml(tooltip) + '">' +
             '<svg class="ndw-svg-icon svg-restart-dims" style="width:14px;height:14px;fill:currentColor"><use href="/assets/sprite/sprite.svg#restart"></use></svg></button>';
     }
@@ -702,6 +841,7 @@ window.EW = (function() {
         formatUptimeStock: formatUptimeStock,
         formatKey: formatKey,
         formatBool: formatBool,
+        labelToken: labelToken,
         createPoller: createPoller,
         createTogglePoller: createTogglePoller,
         createTicker: createTicker,

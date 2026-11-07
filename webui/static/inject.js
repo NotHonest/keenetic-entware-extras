@@ -15,11 +15,11 @@
     var __cfg = window.__ewConfig || {};
 
     var CUSTOM_ITEMS = [
-        { id: 'dashboard',          label: 'Dashboard',    url: '/custom/' },
-        { id: 'geo-split',          label: 'Geo Split',    url: '/custom/#geo-split' },
-        { id: 'smartdns',           label: 'SmartDNS Geo-Config', url: '/custom/#smartdns' },
-        { id: 'smartdns-redirect',  label: 'DNS Redirect', url: '/custom/#smartdns-redirect' },
-        { id: 'webui',              label: 'WebUI',        url: '/custom/#webui' },
+        { id: 'dashboard',          label: 'Маршруты',    url: '/custom/' },
+        { id: 'geo-split',          label: 'Разделение по странам',    url: '/custom/#geo-split' },
+        { id: 'smartdns',           label: 'DNS по зонам', url: '/custom/#smartdns' },
+        { id: 'smartdns-redirect',  label: 'Перехват DNS', url: '/custom/#smartdns-redirect' },
+        { id: 'webui',              label: 'Панель',        url: '/custom/#webui' },
     ];
 
     var DASH_POLL_INTERVAL = (__cfg.pollInterval > 0) ? __cfg.pollInterval : 30000;
@@ -39,7 +39,7 @@
         var chip = row.querySelector('.ew-chip');
         if (!chip) return;
         if (!chip.classList.contains('ew-chip--running') && !chip.classList.contains('ew-chip--caution')) return;
-        var chipPrefix = chip.classList.contains('ew-chip--caution') && chip.textContent.indexOf('DEFAULT') !== -1 ? 'DEFAULT MODE' : 'RUNNING';
+        var chipPrefix = chip.classList.contains('ew-chip--caution') && chip.textContent.indexOf('обычный') !== -1 ? 'обычный режим' : 'Работает';
         chip.innerHTML = '<span class="ew-chip__dot"></span> ' + chipPrefix + ' ' + EW.formatUptimeStock(currentSeconds);
     });
 
@@ -301,7 +301,7 @@
                 .then(function() {
                     btn.classList.remove('ew-update-btn--spinning');
                     btn.disabled = false;
-                    var _label = actionUrl.indexOf('flush') !== -1 ? '\u2713 Flushed ' : '\u2713 Updating\u2026 ';
+                    var _label = actionUrl.indexOf('flush') !== -1 ? '\u2713 Очищено ' : '\u2713 Обновляю\u2026 ';
                     var _p = btn.parentNode;
                     if (_p) { for (var _n = _p.firstChild; _n; _n = _n.nextSibling) {
                         if (_n !== btn && (_n.nodeType === 3 || _n.nodeType === 1)) { _n.textContent = _label; break; }
@@ -368,7 +368,7 @@
                 '</svg>' +
             '</ndw-svg-icon>' +
             '<div class="menu-subtitle__label menu-subtitle__label--wrapped">' +
-                'Entware Extras' +
+                'Маршруты' +
             '</div>';
         section.appendChild(header);
 

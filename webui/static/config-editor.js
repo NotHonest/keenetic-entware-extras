@@ -36,17 +36,17 @@ function openConfigModal(svcId) {
     backdrop.innerHTML =
         '<div class="ew-modal">' +
             '<div class="ew-modal__header">' +
-                '<h2 class="ew-modal__title"><span style="display:inline-block;transform:scaleX(-1)">\u270f\ufe0f</span> ' + EW.escapeHtml(label) + ' Settings</h2>' +
+                '<h2 class="ew-modal__title"><span style="display:inline-block;transform:scaleX(-1)">\u270f\ufe0f</span> ' + EW.escapeHtml(label) + '</h2>' +
                 '<button class="ew-modal__close" data-modal-close>&times;</button>' +
             '</div>' +
             '<div class="ew-modal__body" id="modal-body">' +
                 '<div class="ew-modal__spinner"><div class="ew-spinner"></div></div>' +
             '</div>' +
             '<div class="ew-modal__footer" id="modal-footer" style="display:none">' +
-                '<button class="ndw-button ndw-button--toggle ndw-button--small ew-modal__reset-all" data-reset-all="' + svcId + '">Reset All</button>' +
+                '<button class="ndw-button ndw-button--toggle ndw-button--small ew-modal__reset-all" data-reset-all="' + svcId + '">Сбросить всё</button>' +
                 '<span class="ew-modal__footer-spacer"></span>' +
-                '<button class="ndw-button ndw-button--toggle ndw-button--small" data-modal-close>Cancel</button>' +
-                '<button class="ndw-button ndw-button--toggle ndw-button--toggle-enabled ndw-button--small" data-save-config="' + svcId + '">Save & Restart</button>' +
+                '<button class="ndw-button ndw-button--toggle ndw-button--small" data-modal-close>Отмена</button>' +
+                '<button class="ndw-button ndw-button--toggle ndw-button--toggle-enabled ndw-button--small" data-save-config="' + svcId + '">Сохранить и перезапустить</button>' +
             '</div>' +
         '</div>';
 
@@ -118,7 +118,7 @@ function loadConfigModal(svcId) {
             var providersData = results[3];
 
             if (!configData.ok) {
-                body.innerHTML = '<div class="ew-editor-msg ew-editor-msg--error">Failed: ' + EW.escapeHtml(configData.error || 'unknown') + '</div>';
+                body.innerHTML = '<div class="ew-editor-msg ew-editor-msg--error">Не вышло: ' + EW.escapeHtml(configData.error || 'неизвестно') + '</div>';
                 return;
             }
 
@@ -226,7 +226,7 @@ function saveConfig(svcId) {
     }
 
     if (saveBtn) saveBtn.disabled = true;
-    if (statusEl) { statusEl.textContent = 'Saving...'; statusEl.className = 'ew-modal__status'; }
+    if (statusEl) { statusEl.textContent = 'Сохраняю…'; statusEl.className = 'ew-modal__status'; }
 
     fetch('/api/' + svcId + '/config', {
         method: 'POST',
@@ -240,7 +240,7 @@ function saveConfig(svcId) {
             // webui self-restart: keep modal open, poll until back online
             if (data.output === 'restarting') {
                 if (statusEl) {
-                    statusEl.textContent = 'Restarting...';
+                    statusEl.textContent = 'Перезапуск…';
                     statusEl.className = 'ew-modal__status';
                 }
                 if (saveBtn) saveBtn.disabled = true;
@@ -250,7 +250,7 @@ function saveConfig(svcId) {
                         .then(function() {
                             clearInterval(pollTimer);
                             if (statusEl) {
-                                statusEl.textContent = '\u2713 Restarted';
+                                statusEl.textContent = '\u2713 Перезапущено';
                                 statusEl.className = 'ew-modal__status ew-modal__status--ok';
                             }
                             setTimeout(function() {
@@ -263,7 +263,7 @@ function saveConfig(svcId) {
                 return;
             }
             if (statusEl) {
-                statusEl.textContent = '\u2713 Saved';
+                statusEl.textContent = '\u2713 Сохранено';
                 statusEl.className = 'ew-modal__status ew-modal__status--ok';
             }
             setTimeout(function() {
@@ -272,7 +272,7 @@ function saveConfig(svcId) {
             }, 1200);
         } else {
             if (statusEl) {
-                statusEl.textContent = 'Error: ' + (data.error || 'failed');
+                statusEl.textContent = 'Ошибка: ' + (data.error || 'не вышло');
                 statusEl.className = 'ew-modal__status ew-modal__status--error';
             }
         }
@@ -367,7 +367,7 @@ function handleResetField(btn) {
                         zoneCheckboxes[ci2].checked = defZones.indexOf(zoneCheckboxes[ci2].value) !== -1;
                     }
                     var zTrigger = zsPanels[pi].querySelector('.ew-modal__iface-select-text');
-                    if (zTrigger) zTrigger.textContent = defZones.length ? defZones.join(', ') : 'None';
+                    if (zTrigger) zTrigger.textContent = defZones.length ? defZones.join(', ') : 'Не выбрано';
                     var panelType2 = zsPanels[pi].getAttribute('data-zone-panel');
                     for (var r2 = 0; r2 < zsRadios.length; r2++) {
                         zsRadios[r2].checked = (zsRadios[r2].value === panelType2);
@@ -393,7 +393,7 @@ function handleResetField(btn) {
                 var labelEl = checkedLabel ? checkedLabel.closest('.ew-modal__iface-select-option') : null;
                 var spanEls = labelEl ? labelEl.querySelectorAll('span') : [];
                 var spanEl = spanEls.length > 0 ? spanEls[spanEls.length - 1] : null;
-                trigger.textContent = spanEl ? spanEl.textContent : (defVal || 'Default route');
+                trigger.textContent = spanEl ? spanEl.textContent : (defVal || 'Не выбрано');
             }
         } else {
             // Multi-select (iface_select): check/uncheck based on defVal (space-separated)
@@ -404,7 +404,7 @@ function handleResetField(btn) {
             }
             el.dataset.selectionOrder = defIfs.join(' ');
             var trigger2 = el.querySelector('.ew-modal__iface-select-text');
-            if (trigger2) trigger2.textContent = defIfs.length ? defIfs.map(function(n) { return EW.ifaceLabelFull(n); }).join(', ') : 'Default route';
+            if (trigger2) trigger2.textContent = defIfs.length ? defIfs.map(function(n) { return EW.ifaceLabelFull(n); }).join(', ') : 'Не выбрано';
         }
     } else {
         el.value = defVal;
@@ -532,7 +532,7 @@ function initConfigEditorEvents() {
             }
             wrap.dataset.selectionOrder = currentOrder.join(' ');
             var textEl2 = wrap.querySelector('.ew-modal__iface-select-text');
-            if (textEl2) textEl2.textContent = currentOrder.length ? currentOrder.map(function(n) { return EW.ifaceLabelFull(n); }).join(', ') : 'Default route';
+            if (textEl2) textEl2.textContent = currentOrder.length ? currentOrder.map(function(n) { return EW.ifaceLabelFull(n); }).join(', ') : 'Не выбрано';
         }
     });
 

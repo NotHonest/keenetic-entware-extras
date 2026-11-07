@@ -224,6 +224,30 @@ local function validate_mac(s)
     return nil
 end
 
+-- Diagnostic: /api/geo-split/tunnel-check[?dev=nwg0]
+-- Probes the default route when dev is omitted. Does not change routes.
+if uri == "/api/geo-split/tunnel-check" then
+    local args = ngx.req.get_uri_args()
+    local dev_arg = ""
+    if args.dev and args.dev ~= "" then
+        local dev = validate_iif(args.dev)
+        if not dev then
+            ngx.say('{"ok":false,"error":"invalid_input","message":"dev must match [a-z0-9_]"}')
+            return
+        end
+        dev_arg = ' "' .. dev .. '"'
+    end
+    local cmd = base .. '/geo-split/scripts/tunnel-check.sh --json' .. dev_arg .. " 2>&1"
+    local output, _, _ = run_cmd(cmd)
+    output = output:gsub("%s+$", "")
+    if output == "" or output:sub(1, 1) ~= "{" then
+        ngx.say('{"ok":false,"error":"script_error","message":"' .. json_escape(output ~= "" and output or "empty output") .. '"}')
+        return
+    end
+    ngx.say(output)
+    return
+end
+
 -- Diagnostic: /api/geo-split/route-check?host=...&from=...
 -- "from" can be an interface name (br0, local) or a client MAC (XX:XX:XX:XX:XX:XX).
 -- MAC resolution to fwmark is done inside route-check.sh via --from flag.

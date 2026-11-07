@@ -165,7 +165,7 @@ function setDetails(id, data) {
 
         // app.js-specific: version badge link
         if (e.label.toLowerCase() === 'version') {
-            valHtml = '<a class="ew-version-badge" href="https://github.com/0xkee/keenetic-entware-extras" target="_blank" rel="noopener" data-tooltip="Open project page on GitHub">' + EW.escapeHtml(e.value) + '</a>';
+            valHtml = '<a class="ew-version-badge" href="https://github.com/0xkee/keenetic-entware-extras" target="_blank" rel="noopener" data-tooltip="Страница проекта на GitHub">' + EW.escapeHtml(e.value) + '</a>';
         }
 
         var isNumericOnly = /^\d[\d,.]*[KMG]?[Bb]?$/.test(e.value.trim());

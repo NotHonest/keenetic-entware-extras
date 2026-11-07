@@ -124,7 +124,7 @@
 
         var chip = document.createElement('div');
         chip.className = 'ew-chip ew-chip--stopped';
-        chip.innerHTML = '<span class="ew-chip__dot"></span> LOADING\u2026';
+        chip.innerHTML = '<span class="ew-chip__dot"></span> Загрузка\u2026';
 
         info.appendChild(title);
         info.appendChild(desc);
@@ -235,9 +235,9 @@
         if (data.running && typeof data.enabled === 'boolean' && !data.enabled) {
             state = 'stopped';
         }
-        var text = data.running ? 'RUNNING' : 'STOPPED';
+        var text = data.running ? 'Работает' : 'Остановлено';
         if (data.running && typeof data.enabled === 'boolean' && !data.enabled) {
-            text = 'DISABLED';
+            text = 'Выключено';
         }
         if (data.running && !(typeof data.enabled === 'boolean' && !data.enabled) && data.details && data.details.uptime) {
             text += ' ' + EW.formatUptimeStock(data.details.uptime);
@@ -374,9 +374,9 @@
                     // Stale-while-revalidate: don't overwrite chip if it already has real data.
                     // Only show "stale" if chip is still in initial LOADING state.
                     var chip = document.querySelector('#ew-dash-' + svc.id + ' .ew-chip');
-                    if (chip && chip.textContent.indexOf('LOADING') !== -1) {
+                    if (chip && chip.textContent.indexOf('Загрузка') !== -1) {
                         chip.className = 'ew-chip ew-chip--stale';
-                        chip.innerHTML = '<span class="ew-chip__dot"></span> NO DATA';
+                        chip.innerHTML = '<span class="ew-chip__dot"></span> Нет данных';
                     }
                     // Remove shimmer on error (first load failed)
                     var content = document.getElementById('entware-dash-content');

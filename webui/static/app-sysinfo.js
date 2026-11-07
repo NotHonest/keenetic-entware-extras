@@ -79,7 +79,7 @@ function fetchSystemInfo() {
                 '</span>' +
                 '<span class="ew-sysinfo__item">' +
                     '<span class="ew-sysinfo__icon">' + SYSINFO_ICONS.up + '</span>' +
-                    '<span class="ew-sysinfo__label">up</span>' +
+                    '<span class="ew-sysinfo__label">время</span>' +
                     '<span class="ew-sysinfo__value">' + EW.escapeHtml(data.uptime || "?") + '</span>' +
                 '</span>' +
                 '<span class="ew-sysinfo__item" data-tooltip="' +

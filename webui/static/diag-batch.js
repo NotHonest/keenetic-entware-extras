@@ -18,9 +18,9 @@ function _createBatchTableEl(type) {
     table.className = 'rc-batch-table';
     var thead = '<thead><tr>';
     if (type === 'route') {
-        thead += '<th></th><th>Domain</th><th>Route</th><th>Via</th><th>Verdict</th><th></th>';
+        thead += '<th></th><th>Домен</th><th>Маршрут</th><th>Через</th><th>Итог</th><th></th>';
     } else {
-        thead += '<th></th><th>Domain</th><th>Zone</th><th>Upstream</th><th>IP</th><th></th>';
+        thead += '<th></th><th>Домен</th><th>Зона</th><th>DNS</th><th>IP</th><th></th>';
     }
     thead += '</tr></thead>';
     table.innerHTML = thead;
@@ -48,12 +48,12 @@ function _buildBatchRowPair(item, type) {
         if (!data || data.ok === false) {
             icon = '\u2717';
             rowCls = 'rc-batch-row--error';
-            routeText = data && data.error ? data.error : 'ERROR';
+            routeText = data && data.error ? data.error : 'ошибка';
             ifaceText = '\u2014';
-            verdictText = 'error';
+            verdictText = 'ошибка';
         } else if (data.verdict === 'geo-split') {
             var rt = (data.routes && data.routes[0]) ? data.routes[0] : {};
-            routeText = rt.table_name || 'geo';
+            routeText = EW.labelToken(rt.table_name || 'geo');
             if (rt.match_prefix && rt.match_prefix !== 'default') {
                 var pfx = rt.match_prefix.split('/');
                 if (pfx[1] && pfx[1] !== '32') {
@@ -61,14 +61,14 @@ function _buildBatchRowPair(item, type) {
                 }
             }
             ifaceText = EW.ifaceLabelShort(rt.dev || '?');
-            verdictText = 'geo-split';
+            verdictText = EW.labelToken('geo-split');
         } else if (data.verdict === 'tunnel') {
             icon = '\u2299';
             rowCls = 'rc-batch-row--tunnel';
             var trt = (data.routes && data.routes[0]) ? data.routes[0] : {};
-            routeText = trt.table_name || 'tunnel';
+            routeText = EW.labelToken(trt.table_name || 'tunnel');
             ifaceText = EW.ifaceLabelShort(trt.dev || '?');
-            verdictText = 'tunnel';
+            verdictText = EW.labelToken('tunnel');
         } else if (data.verdict === 'mixed') {
             icon = '\u26a0';
             rowCls = 'rc-batch-row--mixed';
@@ -76,14 +76,14 @@ function _buildBatchRowPair(item, type) {
             ifaceText = Object.keys(_collectAllDevs(data)).map(function(d) { return EW.ifaceLabelShort(d); }).join(', ');
             var mixedPctVal = (data.input_type === 'cidr' && data.coverage) ? ((data.coverage.geo_split_pct === 0 && data.coverage.geo_split_ips > 0) ? '<1' : data.coverage.geo_split_pct) : '';
             var mixedPct = mixedPctVal !== '' ? ' ' + mixedPctVal + '%' : '';
-            verdictText = 'mixed' + mixedPct;
+            verdictText = EW.labelToken('mixed') + mixedPct;
         } else {
             icon = '\u229E';
             rowCls = 'rc-batch-row--default';
             var def = data.default_route || {};
-            routeText = 'default';
+            routeText = EW.labelToken('default');
             ifaceText = EW.ifaceLabelShort(def.dev || (data.routes && data.routes[0] ? data.routes[0].dev : '?'));
-            verdictText = 'policy';
+            verdictText = 'основной маршрут';
         }
 
         row.className += ' ' + rowCls;
@@ -103,7 +103,7 @@ function _buildBatchRowPair(item, type) {
         if (!data || data.ok === false) {
             dIcon = '\u2717';
             dRowCls = 'rc-batch-row--error';
-            zoneText = data && data.error ? data.error : 'ERROR';
+            zoneText = data && data.error ? data.error : 'ошибка';
             upText = '\u2014';
             ipText = '\u2014';
         } else {
@@ -113,12 +113,13 @@ function _buildBatchRowPair(item, type) {
                 dIcon = '\u2192';
                 dRowCls = 'rc-batch-row--default';
             }
+            zoneText = EW.labelToken(zoneText);
             var u = data.upstream || {};
             upText = (u.providers && u.providers.length) ? u.providers.join(', ') : '\u2014';
             var res = data.result || {};
             var dIps = res.ips || [];
             if (dIps.length > 1) {
-                ipText = dIps[0] + ' (' + dIps.length + ' IPs)';
+                ipText = dIps[0] + ' (' + dIps.length + ' ' + _ipWord(dIps.length) + ')';
             } else if (dIps.length === 1) {
                 ipText = dIps[0];
             } else {
@@ -227,9 +228,9 @@ function _runBatch(opts) {
 
     function updateProgress() {
         if (progressEl) {
-            progressEl.innerHTML = '<span class="rc-progress__text">Checking ' + idx + '/' + domains.length + '...</span>' +
+            progressEl.innerHTML = '<span class="rc-progress__text">Проверяю ' + idx + '/' + domains.length + '…</span>' +
                 '<span class="rc-progress__bar"><span class="rc-progress__fill" style="width:' + Math.round((idx / domains.length) * 100) + '%"></span></span>' +
-                '<button class="rc-progress__stop ndw-button ndw-button--toggle ndw-button--small" type="button">Stop</button>';
+                '<button class="rc-progress__stop ndw-button ndw-button--toggle ndw-button--small" type="button">Стоп</button>';
             var stopBtn = progressEl.querySelector('.rc-progress__stop');
             if (stopBtn) {
                 stopBtn.addEventListener('click', function() { stopped = true; });
@@ -241,8 +242,8 @@ function _runBatch(opts) {
         if (stopped || idx >= domains.length) {
             if (progressEl) {
                 progressEl.innerHTML = stopped
-                    ? '<span class="rc-progress__text">Stopped at ' + idx + '/' + domains.length + '</span>'
-                    : '<span class="rc-progress__text">Done \u2014 ' + domains.length + ' checked</span>';
+                    ? '<span class="rc-progress__text">Остановлено на ' + idx + '/' + domains.length + '</span>'
+                    : '<span class="rc-progress__text">Готово \u2014 проверено ' + domains.length + '</span>';
             }
             if (onDone) onDone(results);
             return;

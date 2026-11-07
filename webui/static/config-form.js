@@ -26,7 +26,7 @@ function renderDropdown(opts) {
     var selected = opts.selected || (isMulti ? [] : '');
     var selArray = isMulti ? (Array.isArray(selected) ? selected : String(selected).split(/\s+/).filter(Boolean)) : [];
     var selVal = isMulti ? '' : String(selected);
-    var displayText = opts.displayText || (isMulti ? (selArray.length ? selArray.join(', ') : 'None') : selVal);
+    var displayText = opts.displayText || (isMulti ? (selArray.length ? selArray.join(', ') : 'Не выбрано') : selVal);
 
     var html = '';
     // Container
@@ -43,7 +43,7 @@ function renderDropdown(opts) {
     // Panel
     html += '<div class="ew-modal__iface-select-panel ew-hidden">';
     // Search bar (always present)
-    html += '<div class="ew-modal__iface-filter-wrap"><input type="text" class="ew-modal__iface-filter" placeholder="Search..." autocomplete="off"><span class="ew-modal__iface-filter-count"></span></div>';
+    html += '<div class="ew-modal__iface-filter-wrap"><input type="text" class="ew-modal__iface-filter" placeholder="Поиск…" autocomplete="off"><span class="ew-modal__iface-filter-count"></span></div>';
 
     // Pre-items (special options with dot indicators, e.g. "Default route", "All VPNs")
     if (opts.preItems) {
@@ -131,9 +131,14 @@ function renderDropdown(opts) {
  */
 function renderModalForm(body, svcId, schema, config, defaults, interfaces, zonesData, providersData) {
     var html = '';
+    var advancedOpen = false;
 
     for (var i = 0; i < schema.length; i++) {
         var field = schema[i];
+        if (field.advanced && !advancedOpen) {
+            html += '<details class="ew-advanced"><summary>Дополнительно</summary>';
+            advancedOpen = true;
+        }
         var val = config[field.key] !== undefined ? config[field.key] : '';
         var defVal = defaults[field.key] !== undefined ? defaults[field.key] : '';
         var isDefault = (String(val) === String(defVal));
@@ -158,7 +163,7 @@ function renderModalForm(body, svcId, schema, config, defaults, interfaces, zone
                 '<span class="ew-toggle__bar"></span></label>';
             html += '<label class="ew-modal__label ew-modal__label--clickable" for="' + toggleId + '">' + EW.escapeHtml(field.label) + '</label>';
             html += helpHtml;
-            html += '<button class="ew-modal__reset' + (isDefault ? ' ew-modal__reset--default' : '') + '" data-reset-key="' + field.key + '" data-reset-val="' + EW.escapeHtml(String(defVal)) + '" data-tooltip="Reset to default:\n' + EW.escapeHtml(String(defVal)) + '">' +
+            html += '<button class="ew-modal__reset' + (isDefault ? ' ew-modal__reset--default' : '') + '" data-reset-key="' + field.key + '" data-reset-val="' + EW.escapeHtml(String(defVal)) + '" data-tooltip="Сбросить на значение по умолчанию:\n' + EW.escapeHtml(String(defVal)) + '">' +
                 '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12.5 8c-2.65 0-5.05 1.04-6.83 2.73L3 8v8h8l-2.81-2.81C9.59 11.82 10.96 11 12.5 11c2.76 0 5.07 1.75 5.94 4.2l2.37-.78C19.63 10.96 16.35 8 12.5 8z"/></svg>' +
                 '</button>';
             html += '</div>';
@@ -167,7 +172,7 @@ function renderModalForm(body, svcId, schema, config, defaults, interfaces, zone
             html += '<div class="ew-modal__field-header">';
             html += '<label class="ew-modal__label">' + EW.escapeHtml(field.label) + '</label>';
             html += helpHtml;
-            html += '<button class="ew-modal__reset' + (isDefault ? ' ew-modal__reset--default' : '') + '" data-reset-key="' + field.key + '" data-reset-val="' + EW.escapeHtml(String(defVal)) + '" data-tooltip="Reset to default:\n' + EW.escapeHtml(String(defVal)) + '">' +
+            html += '<button class="ew-modal__reset' + (isDefault ? ' ew-modal__reset--default' : '') + '" data-reset-key="' + field.key + '" data-reset-val="' + EW.escapeHtml(String(defVal)) + '" data-tooltip="Сбросить на значение по умолчанию:\n' + EW.escapeHtml(String(defVal)) + '">' +
                 '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12.5 8c-2.65 0-5.05 1.04-6.83 2.73L3 8v8h8l-2.81-2.81C9.59 11.82 10.96 11 12.5 11c2.76 0 5.07 1.75 5.94 4.2l2.37-.78C19.63 10.96 16.35 8 12.5 8z"/></svg>' +
                 '</button>';
             html += '</div>';
@@ -202,7 +207,7 @@ function renderModalForm(body, svcId, schema, config, defaults, interfaces, zone
             html += '<label class="ew-modal__radio-item ew-modal__radio-item--custom">' +
                 '<input type="radio" name="rt-' + field.key + '" value="__custom__"' + customChecked + '>' +
                 '<span class="ew-modal__radio-label">IP:</span>' +
-                '<input type="text" class="ew-modal__radio-input" placeholder="e.g. 176.65.44.1" value="' + customVal + '"' + (isPreset ? ' disabled' : '') + '>' +
+                '<input type="text" class="ew-modal__radio-input" placeholder="например 176.65.44.1" value="' + customVal + '"' + (isPreset ? ' disabled' : '') + '>' +
                 '</label>';
             html += '</div>';
         } else if (field.type === 'select') {
@@ -247,10 +252,10 @@ function renderModalForm(body, svcId, schema, config, defaults, interfaces, zone
             html += '<div class="ew-modal__zone-radio">';
             html += '<label class="ew-modal__radio-item' + (isZone ? ' ew-modal__radio-item--active' : '') + '">' +
                 '<input type="radio" name="' + zsRadioName + '" value="zone"' + (isZone ? ' checked' : '') + '>' +
-                '<span class="ew-modal__radio-label">Zone</span></label>';
+                '<span class="ew-modal__radio-label">Страны</span></label>';
             html += '<label class="ew-modal__radio-item' + (isUnion ? ' ew-modal__radio-item--active' : '') + '">' +
                 '<input type="radio" name="' + zsRadioName + '" value="union"' + (isUnion ? ' checked' : '') + '>' +
-                '<span class="ew-modal__radio-label">Union</span></label>';
+                '<span class="ew-modal__radio-label">Союз</span></label>';
             html += '</div>';
 
             // Zone panel: multi-select countries
@@ -266,7 +271,7 @@ function renderModalForm(body, svcId, schema, config, defaults, interfaces, zone
 
             // Union panel: single-select grouped unions
             // Pre-compute display text for union
-            var unionDisplayText = 'None';
+            var unionDisplayText = 'Не выбрано';
             for (var ugi = 0; ugi < unions.length; ugi++) {
                 var uitems = unions[ugi].items || [];
                 for (var uii = 0; uii < uitems.length; uii++) {
@@ -302,13 +307,13 @@ function renderModalForm(body, svcId, schema, config, defaults, interfaces, zone
                 var selectedIfs = String(val).split(/\s+/).filter(function(s) { return s; });
                 var _preMap = {};
                 if (field.preItems) { for (var pi = 0; pi < field.preItems.length; pi++) _preMap[field.preItems[pi].value] = field.preItems[pi].label; }
-                var ifDisplayText = selectedIfs.length ? selectedIfs.map(function(n) { return _preMap[n] || EW.ifaceLabelFull(n); }).join(', ') : (field.preItems ? field.preItems[0].label : 'Default route');
+                var ifDisplayText = selectedIfs.length ? selectedIfs.map(function(n) { return _preMap[n] || EW.ifaceLabelFull(n); }).join(', ') : (field.preItems ? field.preItems[0].label : 'Не выбрано');
                 html += renderDropdown({
                     mode: 'multi',
                     configKey: field.key,
                     displayText: ifDisplayText,
                     selected: selectedIfs,
-                    preItems: field.preItems || [{ value: 'default', label: 'Default route' }],
+                    preItems: field.preItems || [{ value: 'default', label: 'Основной маршрут' }],
                     options: ifaceOpts,
                     dots: true,
                     ifaces: sortedIfaces
@@ -316,7 +321,7 @@ function renderModalForm(body, svcId, schema, config, defaults, interfaces, zone
             } else {
                 // Single-select (radio buttons, one value)
                 var selIfVal = String(val);
-                var singlePreItems = field.preItems || [{ value: '', label: 'Default route' }];
+                var singlePreItems = field.preItems || [{ value: '', label: 'Основной маршрут' }];
                 var ifSingleDisplay = '';
                 for (var spi = 0; spi < singlePreItems.length; spi++) {
                     if (singlePreItems[spi].value === selIfVal) { ifSingleDisplay = singlePreItems[spi].label; break; }
@@ -343,6 +348,8 @@ function renderModalForm(body, svcId, schema, config, defaults, interfaces, zone
         }
         html += '</div>';
     }
+
+    if (advancedOpen) html += '</details>';
 
     body.innerHTML = html;
 }

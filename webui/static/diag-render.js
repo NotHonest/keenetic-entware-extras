@@ -10,6 +10,21 @@
 /** Threshold for switching from full diagram to batch table view. */
 var BATCH_THRESHOLD = 5;
 
+/** Display label for a known token. Logic keeps the raw value. */
+function _tok(s) {
+    if (window.EW && EW.labelToken) return EW.labelToken(s);
+    return s;
+}
+
+/** Russian plural for a count of IP addresses. */
+function _ipWord(n) {
+    var n10 = n % 10;
+    var n100 = n % 100;
+    if (n10 === 1 && n100 !== 11) return 'адрес';
+    if (n10 >= 2 && n10 <= 4 && (n100 < 12 || n100 > 14)) return 'адреса';
+    return 'адресов';
+}
+
 // ── Result Rendering ─────────────────────────────────────────────────────────
 
 /**
@@ -65,17 +80,17 @@ function _collectAllDevs(data) {
  */
 function _buildRouteSummary(data) {
     if (!data || data.ok === false) {
-        return '\u2717 error \u00b7 ' + (data && data.error ? data.error : 'unknown');
+        return '\u2717 ошибка \u00b7 ' + (data && data.error ? data.error : 'неизвестно');
     }
     var parts = [];
 
     // CIDR: show coverage instead of IP count
     if (data.input_type === 'cidr' && data.coverage) {
-        parts.push(data.coverage.geo_split_pct + '% geo-split');
+        parts.push(data.coverage.geo_split_pct + '% ЕАЭС');
     } else {
         var ipCount = (data.dns && data.dns.ips) ? data.dns.ips.length : 0;
         if (ipCount > 1) {
-            parts.push(ipCount + ' IPs');
+            parts.push(ipCount + ' ' + _ipWord(ipCount));
         }
     }
 
@@ -84,13 +99,14 @@ function _buildRouteSummary(data) {
     } else {
         var route = (data.routes && data.routes[0]) ? data.routes[0] : null;
         if (route) {
-            var routePrefix = (data.verdict === 'geo-split') ? 'geo ' : ((data.verdict === 'tunnel') ? 'tunnel ' : '');
-            var tableInfo = route.match_type ? routePrefix + route.match_type + ' (table ' + (route.table || 'main') + ')' : 'table ' + (route.table || 'main');
+            var routePrefix = (data.verdict === 'geo-split') ? 'ЕАЭС ' : ((data.verdict === 'tunnel') ? 'VPN ' : '');
+            var tableLabel = (!route.table || route.table === 'main') ? 'основная таблица' : ('таблица ' + route.table);
+            var tableInfo = route.match_type ? routePrefix + _tok(route.match_type) + ' (' + tableLabel + ')' : tableLabel;
             parts.push(tableInfo);
             parts.push(EW.ifaceLabelShort(route.dev || '?'));
         } else {
             var def = data.default_route || {};
-            parts.push('main table');
+            parts.push('основная таблица');
             parts.push(EW.ifaceLabelShort(def.dev || '?'));
         }
     }
@@ -107,13 +123,13 @@ function _buildRouteSummary(data) {
  */
 function _buildDnsSummary(data) {
     if (!data || data.ok === false) {
-        return '\u2717 error \u00b7 ' + (data && data.error ? data.error : 'unknown');
+        return '\u2717 ошибка \u00b7 ' + (data && data.error ? data.error : 'неизвестно');
     }
     var parts = [];
 
     // System DNS warning prefix
     if (data.dns_source === 'system') {
-        parts.push('\u26a0 system DNS :' + (data.dns_port || 53));
+        parts.push('\u26a0 системный DNS :' + (data.dns_port || 53));
     }
 
     var result = data.result || {};
@@ -124,8 +140,8 @@ function _buildDnsSummary(data) {
     // When nothing matched (match_type is "none"/empty), just show the plain
     // group name ("default") instead of a noisy "none (default)" label.
     var zoneInfo = (zone.match_type && zone.match_type !== 'none')
-        ? zone.match_type + ' (' + groupLabel + ')'
-        : groupLabel;
+        ? _tok(zone.match_type) + ' (' + _tok(groupLabel) + ')'
+        : _tok(groupLabel);
     parts.push(zoneInfo);
 
     var upstream = data.upstream || {};
@@ -139,12 +155,12 @@ function _buildDnsSummary(data) {
         } else if (servers[0]) {
             viaText = servers[0];
         }
-        parts.push(upstream.providers.join(', ') + (viaText ? ' via ' + viaText : ''));
+        parts.push(upstream.providers.join(', ') + (viaText ? ' через ' + viaText : ''));
     }
 
     // IP at the end; append count in parentheses when >1 address resolved
     if (sIps.length > 1) {
-        parts.push(sIps[0] + ' (' + sIps.length + ' IPs)');
+        parts.push(sIps[0] + ' (' + sIps.length + ' ' + _ipWord(sIps.length) + ')');
     } else if (sIps.length === 1) {
         parts.push(sIps[0]);
     }
@@ -164,10 +180,10 @@ function _buildRouteDetails(data) {
     // DNS section
     if (data.dns) {
         rows.push('<tr><th colspan="2">DNS</th></tr>');
-        if (data.dns.resolver) rows.push('<tr><td>Resolver</td><td>' + EW.escapeHtml(data.dns.resolver) + '</td></tr>');
-        if (data.dns.group) rows.push('<tr><td>Group</td><td>' + EW.escapeHtml(data.dns.group) + '</td></tr>');
-        if (data.dns.ips) rows.push('<tr><td>IPs</td><td>' + _multiLine(data.dns.ips.map(EW.escapeHtml)) + '</td></tr>');
-        if (data.dns.time_ms !== undefined) rows.push('<tr><td>Time</td><td>' + data.dns.time_ms + 'ms</td></tr>');
+        if (data.dns.resolver) rows.push('<tr><td>Кто отвечает</td><td>' + EW.escapeHtml(data.dns.resolver) + '</td></tr>');
+        if (data.dns.group) rows.push('<tr><td>Группа</td><td>' + EW.escapeHtml(_tok(data.dns.group)) + '</td></tr>');
+        if (data.dns.ips) rows.push('<tr><td>Адреса</td><td>' + _multiLine(data.dns.ips.map(EW.escapeHtml)) + '</td></tr>');
+        if (data.dns.time_ms !== undefined) rows.push('<tr><td>Время</td><td>' + data.dns.time_ms + ' мс</td></tr>');
     }
 
     // CIDR Coverage section (only for CIDR input)
@@ -175,11 +191,11 @@ function _buildRouteDetails(data) {
         var cov = data.coverage;
         var pct = cov.geo_split_pct || 0;
         var barColor = pct === 100 ? '#4caf50' : (pct > 0 ? '#ff9800' : '#666');
-        rows.push('<tr><th colspan="2">CIDR Coverage (' + pct + '% geo-split)</th></tr>');
+        rows.push('<tr><th colspan="2">Покрытие подсети (' + pct + '% ЕАЭС)</th></tr>');
         rows.push('<tr><td colspan="2"><div style="background:#333;border-radius:3px;height:8px;overflow:hidden;margin:2px 0">' +
             '<div style="width:' + pct + '%;height:100%;background:' + barColor + '"></div></div>' +
             '<span style="font-size:11px;color:#aaa">' +
-            (cov.geo_split_ips || 0).toLocaleString() + ' / ' + (cov.total_ips || 0).toLocaleString() + ' IPs</span></td></tr>');
+            (cov.geo_split_ips || 0).toLocaleString() + ' / ' + (cov.total_ips || 0).toLocaleString() + ' ' + _ipWord(cov.total_ips || 0) + '</span></td></tr>');
         // Show top overlapping subnets (max 8, sorted by IP count desc)
         if (cov.overlaps && cov.overlaps.length > 0) {
             var sorted = cov.overlaps.slice().sort(function(a, b) { return (b.ips || 0) - (a.ips || 0); });
@@ -188,21 +204,21 @@ function _buildRouteDetails(data) {
                 var ov = sorted[ci];
                 var devL = ov.dev ? EW.ifaceLabelShort(ov.dev) : '?';
                 rows.push('<tr><td>' + EW.escapeHtml(ov.prefix) + '</td><td>' + EW.escapeHtml(devL) +
-                    ' <span style="color:#888">' + ov.table_name + ', ' + (ov.ips || 0).toLocaleString() + ' IPs</span></td></tr>');
+                    ' <span style="color:#888">' + EW.escapeHtml(_tok(ov.table_name)) + ', ' + (ov.ips || 0).toLocaleString() + ' ' + _ipWord(ov.ips || 0) + '</span></td></tr>');
             }
             if (sorted.length > show) {
-                rows.push('<tr><td colspan="2" style="color:#888;font-size:11px">+' + (sorted.length - show) + ' more subnets</td></tr>');
+                rows.push('<tr><td colspan="2" style="color:#888;font-size:11px">+' + (sorted.length - show) + ' ещё подсетей</td></tr>');
             }
         }
     }
 
     // All routes per IP (expanded table)
     if (data.routes && data.routes.length > 0) {
-        var routeLabel = (data.input_type === 'cidr') ? 'Sampled Routes' : 'Routes per IP';
+        var routeLabel = (data.input_type === 'cidr') ? 'Примеры маршрутов' : 'Маршрут по адресам';
         rows.push('<tr><th colspan="2">' + routeLabel + ' (' + data.routes.length + ')</th></tr>');
         for (var i = 0; i < data.routes.length; i++) {
             var r = data.routes[i];
-            var verdictBadge = r.verdict ? ' <span class="rc-verdict-badge rc-verdict-badge--' + EW.escapeHtml(r.verdict) + '">' + EW.escapeHtml(r.verdict) + '</span>' : '';
+            var verdictBadge = r.verdict ? ' <span class="rc-verdict-badge rc-verdict-badge--' + EW.escapeHtml(r.verdict) + '">' + EW.escapeHtml(_tok(r.verdict)) + '</span>' : '';
             var devLabel = r.dev ? EW.ifaceLabelShort(r.dev) : '?';
             var prefix = (r.match_prefix && r.match_prefix !== 'default') ? ' [' + r.match_prefix + ']' : '';
             rows.push('<tr class="rc-route-row rc-route-row--' + EW.escapeHtml(r.verdict || 'default') + '"><td>' + EW.escapeHtml(r.ip) + '</td><td>' + EW.escapeHtml(devLabel) + prefix + verdictBadge + '</td></tr>');
@@ -230,19 +246,19 @@ function _buildRouteDetails(data) {
     }
     var devKeys = Object.keys(routeDevs);
     if (devKeys.length > 0) {
-        rows.push('<tr><th colspan="2">Route Devices</th></tr>');
+        rows.push('<tr><th colspan="2">Куда уходит</th></tr>');
         for (var di = 0; di < devKeys.length; di++) {
             var dk = devKeys[di];
             var info = routeDevs[dk];
-            var verdictLabel = info.verdict === 'geo-split' ? 'geo' : info.verdict;
-            var viaText = info.via ? ' via ' + info.via : '';
+            var verdictLabel = info.verdict === 'geo-split' ? 'ЕАЭС' : _tok(info.verdict);
+            var viaText = info.via ? ' через ' + info.via : '';
             var tableText = info.table_name ? ' <span style="color:#888">\u00b7 ' + EW.escapeHtml(info.table_name) + '</span>' : '';
             rows.push('<tr><td>' + EW.escapeHtml(verdictLabel) + '</td><td>' + EW.escapeHtml(EW.ifaceLabelShort(dk)) + ' (' + EW.escapeHtml(dk) + ')' + EW.escapeHtml(viaText) + tableText + '</td></tr>');
         }
     } else if (data.default_route && data.default_route.dev) {
-        var defVia = data.default_route.via ? ' via ' + data.default_route.via : '';
-        rows.push('<tr><th colspan="2">Route Devices</th></tr>');
-        rows.push('<tr><td>default</td><td>' + EW.escapeHtml(EW.ifaceLabelShort(data.default_route.dev)) + ' (' + EW.escapeHtml(data.default_route.dev) + ')' + EW.escapeHtml(defVia) + '</td></tr>');
+        var defVia = data.default_route.via ? ' через ' + data.default_route.via : '';
+        rows.push('<tr><th colspan="2">Куда уходит</th></tr>');
+        rows.push('<tr><td>основной</td><td>' + EW.escapeHtml(EW.ifaceLabelShort(data.default_route.dev)) + ' (' + EW.escapeHtml(data.default_route.dev) + ')' + EW.escapeHtml(defVia) + '</td></tr>');
     }
 
     if (rows.length === 0) return '';
@@ -260,23 +276,23 @@ function _buildDnsDetails(data) {
 
     // DNS source indicator
     if (data.dns_source) {
-        rows.push('<tr><th colspan="2">DNS Source</th></tr>');
+        rows.push('<tr><th colspan="2">Откуда DNS</th></tr>');
         var srcLabel = data.dns_source === 'system'
-            ? 'System DNS (:' + (data.dns_port || 53) + ') \u2014 zone routing not active'
+            ? 'Системный DNS (:' + (data.dns_port || 53) + ') \u2014 зоны не включены'
             : 'SmartDNS (:' + (data.dns_port || 6053) + ')';
-        rows.push('<tr><td>Resolver</td><td>' + EW.escapeHtml(srcLabel) + '</td></tr>');
+        rows.push('<tr><td>Кто отвечает</td><td>' + EW.escapeHtml(srcLabel) + '</td></tr>');
     }
 
     if (data.zone) {
-        rows.push('<tr><th colspan="2">Zone</th></tr>');
-        if (data.zone.group) rows.push('<tr><td>Group</td><td>' + EW.escapeHtml(data.zone.group) + '</td></tr>');
-        if (data.zone.match_rule) rows.push('<tr><td>Match rule</td><td>' + EW.escapeHtml(data.zone.match_rule) + '</td></tr>');
-        if (data.zone.match_type) rows.push('<tr><td>Match type</td><td>' + EW.escapeHtml(data.zone.match_type) + '</td></tr>');
+        rows.push('<tr><th colspan="2">Зона</th></tr>');
+        if (data.zone.group) rows.push('<tr><td>Группа</td><td>' + EW.escapeHtml(_tok(data.zone.group)) + '</td></tr>');
+        if (data.zone.match_rule) rows.push('<tr><td>Правило</td><td>' + EW.escapeHtml(data.zone.match_rule) + '</td></tr>');
+        if (data.zone.match_type) rows.push('<tr><td>Как совпало</td><td>' + EW.escapeHtml(_tok(data.zone.match_type)) + '</td></tr>');
     }
 
     if (data.upstream) {
-        rows.push('<tr><th colspan="2">Upstream</th></tr>');
-        if (data.upstream.providers) rows.push('<tr><td>Providers</td><td>' + _multiLine(data.upstream.providers.map(EW.escapeHtml)) + '</td></tr>');
+        rows.push('<tr><th colspan="2">Серверы</th></tr>');
+        if (data.upstream.providers) rows.push('<tr><td>Провайдеры</td><td>' + _multiLine(data.upstream.providers.map(EW.escapeHtml)) + '</td></tr>');
         if (data.upstream.servers) {
             // Pair each server with its hostname (if available) on separate lines
             var srvLines = [];
@@ -286,7 +302,7 @@ function _buildDnsDetails(data) {
                 var hn = hostnames[si] ? EW.escapeHtml(hostnames[si]) : '';
                 srvLines.push(hn ? hn + ' (' + srv + ')' : srv);
             }
-            rows.push('<tr><td>Servers</td><td>' + _multiLine(srvLines) + '</td></tr>');
+            rows.push('<tr><td>Адреса</td><td>' + _multiLine(srvLines) + '</td></tr>');
         }
         if (data.upstream.interface) {
             // Interface may be space-separated list; split and label each
@@ -297,18 +313,18 @@ function _buildDnsDetails(data) {
                     var label = EW.ifaceLabelShort(iif);
                     return (label !== iif) ? label + ' (' + iif + ')' : iif;
                 });
-                rows.push('<tr><td>Interface</td><td>' + _multiLine(ifParts.map(EW.escapeHtml)) + '</td></tr>');
+                rows.push('<tr><td>Интерфейс</td><td>' + _multiLine(ifParts.map(EW.escapeHtml)) + '</td></tr>');
             } else if (data.upstream.interface.indexOf('direct') >= 0) {
-                rows.push('<tr><td>Interface</td><td>direct</td></tr>');
+                rows.push('<tr><td>Интерфейс</td><td>напрямую</td></tr>');
             }
         }
     }
 
     if (data.result) {
-        rows.push('<tr><th colspan="2">Result</th></tr>');
-        if (data.result.ips) rows.push('<tr><td>IPs</td><td>' + _multiLine(data.result.ips.map(EW.escapeHtml)) + '</td></tr>');
+        rows.push('<tr><th colspan="2">Результат</th></tr>');
+        if (data.result.ips) rows.push('<tr><td>Адреса</td><td>' + _multiLine(data.result.ips.map(EW.escapeHtml)) + '</td></tr>');
         if (data.result.ttl !== undefined) rows.push('<tr><td>TTL</td><td>' + data.result.ttl + '</td></tr>');
-        if (data.result.time_ms !== undefined) rows.push('<tr><td>Time</td><td>' + data.result.time_ms + 'ms</td></tr>');
+        if (data.result.time_ms !== undefined) rows.push('<tr><td>Время</td><td>' + data.result.time_ms + ' мс</td></tr>');
     }
 
     if (rows.length === 0) return '';
@@ -344,7 +360,7 @@ function _renderFullResult(container, data, type) {
         if (type === 'dns') {
             if (data.dns_source === 'system') {
                 // System DNS fallback — show port instead of zone group
-                legend.textContent = query + ' \u2192 system :' + (data.dns_port || 53);
+                legend.textContent = query + ' \u2192 системный :' + (data.dns_port || 53);
             } else {
                 // DNS Check has no top-level verdict — use matched zone group instead,
                 // same visual pattern as Route Check's "query + icon + verdict".
@@ -352,13 +368,13 @@ function _renderFullResult(container, data, type) {
                 var groupLabel = zone.group || 'default';
                 var isDefaultGroup = groupLabel === 'default';
                 var dIcon = isDefaultGroup ? '\u2192' : '\u21c4';
-                legend.textContent = query + ' ' + dIcon + ' ' + groupLabel;
+                legend.textContent = query + ' ' + dIcon + ' ' + _tok(groupLabel);
             }
         } else {
             var verdict = (data && data.verdict) ? data.verdict : '';
             if (verdict) {
                 var isPolicy = verdict === 'default';
-                var displayVerdict = isPolicy ? 'policy' : verdict;
+                var displayVerdict = isPolicy ? 'основной маршрут' : _tok(verdict);
                 // Append CIDR coverage % for mixed verdict (<1% when rounds to 0)
                 if (verdict === 'mixed' && data.input_type === 'cidr' && data.coverage) {
                     var pctLabel = (data.coverage.geo_split_pct === 0 && data.coverage.geo_split_ips > 0) ? '<1' : data.coverage.geo_split_pct;
@@ -398,7 +414,7 @@ function _renderFullResult(container, data, type) {
     if (detailsHtml) {
         var detailsDiv = document.createElement('div');
         detailsDiv.className = 'rc-result__details rc-hidden';
-        detailsDiv.innerHTML = '<div class="rc-result__details-header">Technical details</div>' +
+        detailsDiv.innerHTML = '<div class="rc-result__details-header">Подробности</div>' +
             '<div class="rc-result__details-body">' + detailsHtml + '</div>';
         wrapper.appendChild(detailsDiv);
 
