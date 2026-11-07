@@ -226,7 +226,8 @@ end
 
 -- Diagnostic: /api/geo-split/ladder
 -- Keenetic priority ladder from show interface, show ping-check, and the
--- kernel default route. No curl and no route changes.
+-- kernel default route. Also the applied international DNS binding from the
+-- generated SmartDNS config. No curl and no route changes.
 if uri == "/api/geo-split/ladder" then
     local cmd = base .. '/geo-split/scripts/ladder.sh --json 2>&1'
     local output, _, _ = run_cmd(cmd)

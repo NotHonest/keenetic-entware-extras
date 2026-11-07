@@ -163,7 +163,7 @@ opkg remove webui
 
 | Метод | Эндпоинт | Описание |
 |-------|----------|----------|
-| GET | `/api/geo-split/ladder` | Лестница соединений Keenetic: приоритет, `ping-check`, кто сейчас основной. Только чтение, без curl |
+| GET | `/api/geo-split/ladder` | Лестница соединений Keenetic: приоритет, `ping-check`, кто сейчас основной, куда привязан зарубежный DNS. Только чтение, без curl |
 | GET | `/api/geo-split/tunnel-check` | Проходит ли трафик через интерфейс основного маршрута. `?dev=` задаёт имя `[a-z0-9_]`, не длиннее 15 символов. Только чтение |
 | GET | `/api/geo-split/route-check?host=...&from=...` | Проверка маршрута до хоста (from: MAC клиента или `local`) |
 | GET | `/api/smartdns/dns-check?host=...` | Диагностика DNS: зона, upstream, разрешение |
@@ -240,7 +240,7 @@ nginx-webui status:
 | `scripts/patch-stock-ui.sh` | Копирует штатный UI в tmpfs и применяет патчи |
 | `scripts/status.sh` | Диагностика: процесс, порт, конфигурация, HTTP, logrotate |
 | `static/index.html` | Свой дашборд — HTML, сверху экран сценария |
-| `static/scenario.js` | Экран сценария: зона `eas`, выход на провайдера, вход `br0`. Лестница соединений только читается. Приоритет Keenetic не меняет |
+| `static/scenario.js` | Экран сценария: зона `eas`, выход на провайдера, вход `br0`. Лестница читает приоритет и текущую привязку зарубежного DNS. Приоритет Keenetic не меняет |
 | `static/app.js` | Свой дашборд — JS (карточки статуса, вкладки, API) |
 | `static/app-sysinfo.js` | Секция сведений о системе на дашборде |
 | `static/config-schemas.js` | Схемы полей редактора конфигурации по службам |

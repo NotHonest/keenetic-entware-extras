@@ -247,4 +247,52 @@ $(tail -n 10 "$LOG" 2>/dev/null || true)
 EOF
 fi
 
-printf '{"ok":true,"default_dev":"%s","steps":[%s],"events":[%s]}\n' "$DEFAULT_DEV" "$steps" "$events"
+# What SmartDNS is using now. The generated -interface line is the applied
+# binding. The force-direct stamp only asks the next generate to drop it,
+# so a stamp next to a remaining -interface is still the old tunnel.
+DNS_CONF="/opt/etc/smartdns/dns-servers-other.conf"
+DNS_STAMP="/opt/var/run/smartdns-force-direct"
+dns_mode="unknown"
+dns_dev=""
+if [ -f "$DNS_CONF" ]; then
+  dns_raw="$(awk '
+    {
+      line = $0
+      sub(/^[ \t]+/, "", line)
+      if (line ~ /^#/) next
+      n = split(line, a, " ")
+      for (i = 1; i <= n; i++) {
+        if (a[i] == "-interface" && (i + 1) <= n) {
+          print a[i + 1]
+          exit
+        }
+      }
+    }
+  ' "$DNS_CONF" 2>/dev/null || true)"
+  case "$dns_raw" in
+    ""|*[!a-z0-9_]*) dns_raw="" ;;
+  esac
+  if [ "${#dns_raw}" -gt 15 ]; then
+    dns_raw=""
+  fi
+  case "$dns_raw" in
+    nwg*|awg*|wg[0-9]*|ovpn*|tun[0-9]*|tap*|sstp*|l2tp*|pptp*|ipsec*|gre*|vti*)
+      dns_dev="$dns_raw"
+      dns_mode="tunnel"
+      ;;
+    *)
+      dns_mode="direct"
+      ;;
+  esac
+fi
+dns_pending="false"
+if [ -f "$DNS_STAMP" ] && [ "$dns_mode" = "tunnel" ]; then
+  dns_pending="true"
+fi
+dns_json="$(printf '%s,%s,"pending":%s' \
+  "$(json_kv dev "$dns_dev")" \
+  "$(json_kv mode "$dns_mode")" \
+  "$dns_pending")"
+
+printf '{"ok":true,"default_dev":"%s","steps":[%s],"events":[%s],"dns":{%s}}\n' \
+  "$DEFAULT_DEV" "$steps" "$events" "$dns_json"

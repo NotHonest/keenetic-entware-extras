@@ -195,29 +195,44 @@
         }
         if (!t.tunnel) {
             return '<p class="ew-scenario__warn">Основной маршрут сейчас ' + esc(pretty(t.dev)) +
-                '. Это не VPN, поэтому проверять туннель нечего, и зарубежный DNS спрашивает напрямую.</p>';
+                '. Это не VPN, поэтому проверять туннель нечего.</p>';
         }
         var name = pretty(t.dev || def);
-        if (t.reachable && t.dns_direct) {
-            return '<p class="ew-scenario__ok">' + esc(name) + ' снова отвечает. Зарубежный DNS ещё минуту может идти напрямую, потом вернётся в этот туннель.</p>';
-        }
         if (t.reachable) {
-            return '<p class="ew-scenario__ok">' + esc(name) + ' отвечает. Зарубежный DNS идёт через тот VPN, который сейчас основной. Если он замолчит, Keenetic возьмёт следующий, и DNS уйдёт за ним.</p>';
+            return '<p class="ew-scenario__ok">' + esc(name) + ' отвечает.</p>';
         }
-        if (t.dns_direct) {
-            return '<p class="ew-scenario__warn">' + esc(name) + ' молчит. Зарубежные сайты могут не открываться, пока Keenetic держит его основным маршрутом. Зарубежный DNS временно спрашивает провайдера напрямую.</p>';
-        }
-        return '<p class="ew-scenario__warn">' + esc(name) + ' молчит. Зарубежный DNS ещё через него. Если так продлится, DNS уйдёт на следующий живой VPN или к провайдеру. Маршрут Keenetic страница не переключает.</p>';
+        return '<p class="ew-scenario__warn">' + esc(name) +
+            ' молчит. Зарубежные сайты могут не открываться, пока Keenetic держит его основным маршрутом. Маршрут страница не переключает.</p>';
     }
 
-    function ladderCurrentName(data) {
-        if (!data || data.ok === false) return "";
-        var dev = data.default_dev || "";
-        var steps = data.steps || [];
+    function ladderNameFor(data, dev) {
+        var steps = (data && data.steps) || [];
         for (var i = 0; i < steps.length; i++) {
             if (steps[i].dev === dev && steps[i].name) return steps[i].name;
         }
         return dev ? pretty(dev) : "";
+    }
+
+    function ladderCurrentName(data) {
+        if (!data || data.ok === false) return "";
+        return ladderNameFor(data, data.default_dev || "");
+    }
+
+    function dnsSentence(data) {
+        var dns = data && data.dns;
+        if (!dns || !dns.mode || dns.mode === "unknown") return "";
+        if (dns.mode === "direct" || !dns.dev) {
+            return " Зарубежный DNS идёт напрямую.";
+        }
+        if (dns.mode !== "tunnel") return "";
+        var dnsName = ladderNameFor(data, dns.dev);
+        var sentence = dns.dev === (data.default_dev || "")
+            ? " Зарубежный DNS идёт через " + esc(dnsName) + "."
+            : " Зарубежный DNS ещё через " + esc(dnsName) + ".";
+        if (dns.pending) {
+            sentence += " Переход напрямую уже отмечен, SmartDNS его ещё не применил.";
+        }
+        return sentence;
     }
 
     function stepRole(step) {
@@ -246,7 +261,8 @@
         var steps = data.steps || [];
         var current = ladderCurrentName(data) || "неизвестно";
         var html = '<p class="ew-scenario__ladder-lead">Сейчас основной — ' + esc(current) +
-            '. Сверху тот, кого Keenetic выбирает первым. Строки обновляются каждые 30 секунд. Приоритет эта страница не меняет.</p>';
+            '.' + dnsSentence(data) +
+            ' Сверху тот, кого Keenetic выбирает первым. Строки обновляются каждые 30 секунд. Приоритет эта страница не меняет.</p>';
         if (!steps.length) {
             return html + '<p class="ew-scenario__warn">Keenetic не показал соединений с приоритетом.</p>' + ladderEvents(data);
         }
@@ -350,7 +366,7 @@
                 '<button type="button" class="ndw-button ndw-button--toggle ndw-button--small" data-scenario-advanced>Дополнительно</button>' +
                 (state.message ? '<span class="ew-scenario__status ew-scenario__status--' + esc(state.messageKind) + '">' + esc(state.message) + '</span>' : '') +
             '</div>' +
-            '<p class="ew-scenario__fine">Кнопка не меняет приоритет соединений Keenetic и не трогает DNS сегмента пылесоса. Зарубежный трафик идёт туда, куда смотрит основной маршрут. Зарубежный DNS следует за ним: в текущий VPN, а если живого VPN нет — к провайдеру. Эта страница маршрут не переключает.</p>';
+            '<p class="ew-scenario__fine">Кнопка не меняет приоритет соединений Keenetic и не трогает DNS сегмента пылесоса. Зарубежный трафик идёт туда, куда смотрит основной маршрут. Куда привязан зарубежный DNS прямо сейчас, написано в лестнице выше. Эта страница маршрут не переключает.</p>';
     }
 
     function load() {
