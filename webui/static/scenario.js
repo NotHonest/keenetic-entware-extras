@@ -222,21 +222,22 @@
         return ladderNameFor(data, data.default_dev || "");
     }
 
-    function dnsSentence(data) {
+    function dnsFact(data) {
         var dns = data && data.dns;
-        if (!dns || !dns.mode || dns.mode === "unknown") return "";
+        if (!dns || !dns.mode || dns.mode === "unknown") return null;
         if (dns.mode === "direct" || !dns.dev) {
-            return " Зарубежный DNS идёт напрямую.";
+            return { text: "Зарубежный DNS идёт напрямую.", lag: true };
         }
-        if (dns.mode !== "tunnel") return "";
+        if (dns.mode !== "tunnel") return null;
         var dnsName = ladderNameFor(data, dns.dev);
-        var sentence = dns.dev === (data.default_dev || "")
-            ? " Зарубежный DNS идёт через " + esc(dnsName) + "."
-            : " Зарубежный DNS ещё через " + esc(dnsName) + ".";
+        var same = dns.dev === (data.default_dev || "");
+        var text = same
+            ? "Зарубежный DNS идёт через " + dnsName + "."
+            : "Зарубежный DNS ещё через " + dnsName + ".";
         if (dns.pending) {
-            sentence += " Переход напрямую уже отмечен, SmartDNS его ещё не применил.";
+            text += " Переход напрямую уже отмечен, SmartDNS его ещё не применил.";
         }
-        return sentence;
+        return { text: text, lag: !same || !!dns.pending };
     }
 
     function stepRole(step) {
@@ -264,9 +265,15 @@
         }
         var steps = data.steps || [];
         var current = ladderCurrentName(data) || "неизвестно";
-        var html = '<p class="ew-scenario__ladder-lead">Сейчас основной — ' + esc(current) +
-            '.' + dnsSentence(data) +
-            ' Сверху тот, кого Keenetic выбирает первым. Строки обновляются каждые 30 секунд. Приоритет эта страница не меняет.</p>';
+        var fact = dnsFact(data);
+        var html = '<div class="ew-scenario__now">' +
+            '<div class="ew-scenario__now-kicker">Сейчас основной</div>' +
+            '<div class="ew-scenario__now-name">' + esc(current) + '</div>';
+        if (fact) {
+            html += '<div class="ew-scenario__now-dns' + (fact.lag ? ' ew-scenario__now-dns--lag' : '') + '">' +
+                esc(fact.text) + '</div>';
+        }
+        html += '</div>';
         if (!steps.length) {
             return html + '<p class="ew-scenario__warn">Keenetic не показал соединений с приоритетом.</p>' + ladderEvents(data);
         }
@@ -276,12 +283,18 @@
             var role = step.role;
             if (role !== "primary" && role !== "backup" && role !== "isp" && role !== "down") role = "backup";
             html += '<div class="ew-scenario__step ew-scenario__step--' + esc(role) + '">' +
-                '<div class="ew-scenario__step-role">' + esc(stepRole(step)) + '</div>' +
-                '<div class="ew-scenario__step-name">' + esc(step.name || pretty(step.dev)) + '</div>' +
-                '<div class="ew-scenario__step-meta">' + esc(stepMeta(step)) + '</div>' +
+                '<span class="ew-scenario__step-mark" aria-hidden="true"></span>' +
+                '<span class="ew-scenario__step-body">' +
+                    '<span class="ew-scenario__step-line">' +
+                        '<span class="ew-scenario__step-name">' + esc(step.name || pretty(step.dev)) + '</span>' +
+                        '<span class="ew-scenario__step-role">' + esc(stepRole(step)) + '</span>' +
+                    '</span>' +
+                    '<span class="ew-scenario__step-meta">' + esc(stepMeta(step)) + '</span>' +
+                '</span>' +
                 '</div>';
         }
         html += '</div>';
+        html += '<p class="ew-scenario__ladder-note">Сверху тот, кого Keenetic выбирает первым. Строки обновляются каждые 30 секунд. Приоритет эта страница не меняет.</p>';
         html += ladderEvents(data);
         return html;
     }
@@ -290,7 +303,7 @@
         var events = (data && data.events) || [];
         var html = '<div class="ew-scenario__events-title">Последние переходы</div>';
         if (!events.length) {
-            return html + '<p class="ew-scenario__events-empty">Переходов ещё не было. Здесь появятся смена основного маршрута и переход DNS.</p>';
+            return '<p class="ew-scenario__events-empty">Переходов ещё не было. Здесь появятся смена маршрута и DNS.</p>';
         }
         html += '<ul class="ew-scenario__events">';
         var n = events.length < 10 ? events.length : 10;
@@ -400,17 +413,20 @@
 
         root.innerHTML =
             '<h2 class="ew-scenario__title">ЕАЭС напрямую, остальное в VPN</h2>' +
-            '<p class="ew-scenario__lead">Домашняя сеть: российские сайты через провайдера, всё остальное — по лестнице соединений Keenetic.</p>' +
+            '<p class="ew-scenario__lead">Российские сайты через провайдера, всё остальное — по лестнице ниже.</p>' +
             '<div class="ew-scenario__ladder" data-scenario-ladder>' + ladderInner() + '</div>' +
+            '<div class="ew-scenario__section">' +
+                '<div class="ew-scenario__section-title">Куда ушёл трафик</div>' +
+                '<div class="ew-scenario__checked" data-scenario-checked>' + esc(checksNote()) + '</div>' +
+            '</div>' +
             '<div class="ew-scenario__grid">' +
                 checkCard("ozon.ru · " + homeLabel, state.ozon, "direct") +
                 checkCard("github.com · " + homeLabel, state.github, "vpn") +
                 checkCard(vacuumLabel, state.vacuum, "info") +
             '</div>' +
-            '<p class="ew-scenario__checked" data-scenario-checked>' + esc(checksNote()) + '</p>' +
             banner(ispName, def) +
             tunnelLine(def) +
-            '<div class="ew-scenario__fields">' +
+            '<div class="ew-scenario__policy">' +
                 '<div class="ew-scenario__field"><div class="ew-scenario__field-label">Напрямую</div><div class="ew-scenario__field-value">ЕАЭС</div><div class="ew-scenario__field-hint">Россия, Беларусь, Казахстан, Армения, Киргизия</div></div>' +
                 '<div class="ew-scenario__field"><div class="ew-scenario__field-label">Остальное</div><div class="ew-scenario__field-value" data-scenario-rest>' + esc(restLabel) + '</div><div class="ew-scenario__field-hint">Сначала основной VPN, потом запасной, затем провайдер</div></div>' +
                 '<div class="ew-scenario__field"><div class="ew-scenario__field-label">Где действует</div><div class="ew-scenario__field-value">' + esc(homeLabel) + '</div><div class="ew-scenario__field-hint">' + esc(vacuumLabel) + ' в правило не входит</div></div>' +
