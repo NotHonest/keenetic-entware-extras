@@ -3,6 +3,9 @@
 # Run it on the computer that has the git checkout, not on the router.
 # The 0xkee feed replaces scripts, Lua and the panel. This copies those
 # files from the checkout again. config.conf and defaults.conf stay put.
+# If /opt/sbin/conntrack is missing, the Entware conntrack package is
+# installed. conntrackd is not. A failed install is reported after the
+# panel and SmartDNS have been restarted.
 #
 #   KEE_PASS_FILE=/path/to/password-file ./scripts/reapply-fork.sh
 #   KEE_PASS_FILE=/path/to/password-file ./scripts/reapply-fork.sh --dry-run
@@ -165,6 +168,20 @@ if [ "$before" != "$after" ]; then
 fi
 echo "config.conf and defaults.conf are unchanged."
 
+conntrack_rc=0
+if kee_ssh 'test -x /opt/sbin/conntrack'; then
+  echo "conntrack already installed."
+else
+  echo "Installing conntrack."
+  if ! kee_ssh 'opkg update && opkg install conntrack'; then
+    echo "conntrack was not installed. Old tunnel flows will not be closed until it is." >&2
+    conntrack_rc=1
+  fi
+fi
+
 echo "Restarting the panel and SmartDNS."
 kee_ssh '/opt/etc/init.d/S80nginx-webui restart; /opt/etc/init.d/S37smartdns-conf restart'
+if [ "$conntrack_rc" != 0 ]; then
+  exit 1
+fi
 echo "Done. geo-split was not restarted."

@@ -807,7 +807,12 @@ body {
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 10px;
 }
-.ew-scenario__grid { margin-bottom: 14px; }
+.ew-scenario__grid { margin-bottom: 6px; }
+.ew-scenario__checked {
+    margin: 0 0 14px;
+    font-size: 12px;
+    color: var(--text-gray, #949b9f);
+}
 .ew-scenario__fields { margin: 4px 0 14px; }
 .ew-scenario__check,
 .ew-scenario__field {

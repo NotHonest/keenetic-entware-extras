@@ -25,6 +25,10 @@
         tunnel: null,
         ladder: null,
         ladderTimer: 0,
+        checkedDev: null,
+        checksAt: 0,
+        slowBusy: false,
+        pendingDev: null,
         ispName: "",
         busy: false,
         message: "",
@@ -297,6 +301,29 @@
         return html;
     }
 
+    var slowGen = 0;
+
+    function ladderDev(data) {
+        if (!data || data.ok === false) return null;
+        return data.default_dev || "";
+    }
+
+    function twoDigits(n) {
+        return (n < 10 ? "0" : "") + n;
+    }
+
+    function checksNote() {
+        if (state.slowBusy) return "Проверяю маршруты…";
+        if (!state.checksAt) return "";
+        var d = new Date(state.checksAt);
+        return "Проверено в " + twoDigits(d.getHours()) + ":" + twoDigits(d.getMinutes());
+    }
+
+    function paintChecksNote() {
+        var note = document.querySelector("[data-scenario-checked]");
+        if (note) note.textContent = checksNote();
+    }
+
     function paintLadder() {
         var box = document.querySelector("[data-scenario-ladder]");
         if (box) box.innerHTML = ladderInner();
@@ -305,10 +332,38 @@
         if (rest && live) rest.textContent = live;
     }
 
+    function refreshSlow() {
+        var gen = ++slowGen;
+        var target = state.pendingDev;
+        state.slowBusy = true;
+        paintChecksNote();
+        Promise.all([
+            soft("/api/geo-split/route-check?host=ozon.ru&from=br0"),
+            soft("/api/geo-split/route-check?host=github.com&from=br0"),
+            soft("/api/geo-split/route-check?host=github.com&from=br1"),
+            soft("/api/geo-split/tunnel-check")
+        ]).then(function (rows) {
+            if (gen !== slowGen) return;
+            state.ozon = rows[0];
+            state.github = rows[1];
+            state.vacuum = rows[2];
+            state.tunnel = rows[3];
+            state.checkedDev = target;
+            state.checksAt = Date.now();
+            state.slowBusy = false;
+            render();
+            if (state.pendingDev !== state.checkedDev) refreshSlow();
+        });
+    }
+
     function refreshLadder() {
         soft("/api/geo-split/ladder").then(function (data) {
             state.ladder = data;
             paintLadder();
+            var dev = ladderDev(data);
+            if (dev === null || state.checkedDev === null || dev === state.checkedDev) return;
+            state.pendingDev = dev;
+            if (!state.slowBusy) refreshSlow();
         });
     }
 
@@ -352,6 +407,7 @@
                 checkCard("github.com · " + homeLabel, state.github, "vpn") +
                 checkCard(vacuumLabel, state.vacuum, "info") +
             '</div>' +
+            '<p class="ew-scenario__checked" data-scenario-checked>' + esc(checksNote()) + '</p>' +
             banner(ispName, def) +
             tunnelLine(def) +
             '<div class="ew-scenario__fields">' +
@@ -370,6 +426,7 @@
     }
 
     function load() {
+        var gen = ++slowGen;
         var root = document.getElementById("scenario");
         if (root && !state.config) {
             root.innerHTML = '<p class="ew-scenario__lead">Проверяю, куда сейчас идут ozon.ru и github.com…</p>';
@@ -383,6 +440,7 @@
             soft("/api/geo-split/tunnel-check"),
             soft("/api/geo-split/ladder")
         ]).then(function (rows) {
+            if (gen !== slowGen) return;
             state.interfaces = rows[0] && rows[0].ok !== false ? rows[0] : { interfaces: [] };
             if (rows[1] && rows[1].config) {
                 state.config = rows[1].config;
@@ -393,6 +451,11 @@
             state.vacuum = rows[4];
             state.tunnel = rows[5];
             state.ladder = rows[6];
+            state.checkedDev = ladderDev(rows[6]);
+            if (state.checkedDev === null) state.checkedDev = "";
+            state.pendingDev = state.checkedDev;
+            state.checksAt = Date.now();
+            state.slowBusy = false;
             state.busy = false;
             render();
         });
