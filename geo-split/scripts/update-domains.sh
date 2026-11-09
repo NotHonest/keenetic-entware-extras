@@ -106,6 +106,10 @@ _fill_domain_table() {
     return 0
   }
   gw=$(resolve_target_gateway "$dev")
+  if [ -z "$gw" ] && gateway_required "$dev"; then
+    log "Gateway for $dev is not ready, domain routes left unchanged"
+    return 1
+  fi
   log "Route out: $dev${gw:+ via $gw}"
   fill_routes_batch "$DOMAIN_ROUTE_TABLE" "$DOMAINS_CACHE_FILE" "$dev" host "$gw"
 }
@@ -117,7 +121,7 @@ main() {
 
   # --refill: fill table from existing cache (no resolve, for NDM hook UP)
   if [ "$arg" = "--refill" ]; then
-    _fill_domain_table
+    _fill_domain_table || return 1
     return 0
   fi
 
@@ -142,26 +146,35 @@ main() {
       return 0
     fi
 
-    # Diff check: skip route table update if IPs unchanged
+    # Diff check: still refill when the list matches but the nexthop does not.
     if [ -f "$DOMAINS_CACHE_FILE" ] && cmp -s "$DOMAINS_CACHE_FILE" "${DOMAINS_CACHE_FILE}.new"; then
       touch -d "@$t_start" "$DOMAINS_CACHE_FILE"
       rm -f "${DOMAINS_CACHE_FILE}.new"
-      log "Domain IPs unchanged — routes kept as-is"
+      if target_nexthop_matches "$DOMAIN_ROUTE_TABLE"; then
+        log "Domain IPs unchanged — routes kept as-is"
+        return 0
+      fi
+      log "Domain IPs unchanged, nexthop differs — refilling"
+      _fill_domain_table || return 1
       return 0
     fi
 
     # IPs changed (or first run) — commit new cache and update routes
     mv "${DOMAINS_CACHE_FILE}.new" "$DOMAINS_CACHE_FILE"
     touch -d "@$t_start" "$DOMAINS_CACHE_FILE"
-    _fill_domain_table
+    _fill_domain_table || return 1
     return 0
   fi
-  # Cache fresh — only refill if table is empty (e.g. after restart)
-  if is_table_filled "$DOMAIN_ROUTE_TABLE"; then
+  # Cache fresh — skip only when the live nexthop matches. A non-empty table
+  # can still be scope link from a refill that ran before the gateway existed.
+  if is_table_filled "$DOMAIN_ROUTE_TABLE" && target_nexthop_matches "$DOMAIN_ROUTE_TABLE"; then
     log "Domain cache fresh, table $DOMAIN_ROUTE_TABLE already filled — skipping"
     return 0
   fi
-  _fill_domain_table
+  if is_table_filled "$DOMAIN_ROUTE_TABLE"; then
+    log "Domain table $DOMAIN_ROUTE_TABLE nexthop differs, refilling"
+  fi
+  _fill_domain_table || return 1
   return 0
 }
 

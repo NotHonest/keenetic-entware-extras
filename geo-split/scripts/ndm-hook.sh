@@ -31,19 +31,14 @@ case "${ROUTE_OUT:-auto}" in
 esac
 
 # ── Check if tables are correctly filled ───────────────────────────
-# Returns 0 if both tables non-empty AND route dev matches desired dev.
+# Returns 0 when both tables are non-empty and each live route's device and
+# nexthop match the config. The stamp file only stores the device name, so a
+# scope-link table still looks "filled" after the gateway appears. Read the route.
 tables_ok() {
   is_table_filled "$SUBNET_ROUTE_TABLE" || return 1
   is_table_filled "$DOMAIN_ROUTE_TABLE" || return 1
-  local desired_dev cur_dev
-  desired_dev=$(resolve_target_interface 2>/dev/null) || return 1
-  cur_dev=$(cat "${TABLE_STAMP_PREFIX}${SUBNET_ROUTE_TABLE}.filled" 2>/dev/null) || cur_dev=""
-  # Fallback: read from actual route table if stamp has no dev info
-  if [ -z "$cur_dev" ] || [ "$cur_dev" = "" ]; then
-    cur_dev=$(ip route show table "$SUBNET_ROUTE_TABLE" 2>/dev/null | \
-      sed -n 's/.*dev \([^ ]*\).*/\1/p' | head -1)
-  fi
-  [ "$cur_dev" = "$desired_dev" ]
+  target_nexthop_matches "$SUBNET_ROUTE_TABLE" || return 1
+  target_nexthop_matches "$DOMAIN_ROUTE_TABLE"
 }
 
 # ── Fast path: everything correct → exit ───────────────────────────
@@ -73,27 +68,48 @@ fi
 touch "$LOCK"
 
 # ── Background reconciliation ─────────────────────────────────────
+# DHCP can lag the link by tens of seconds. Refilling while the gateway is
+# empty used to install scope-link routes and then treat them as healthy.
+# Wait for the gateway instead of flushing. Give up without touching routes.
 {
   trap 'rm -f "$LOCK"' EXIT
 
-  sleep 3  # debounce: let routing stabilize after state change
+  _attempt=0
+  while [ "$_attempt" -lt 7 ]; do
+    _attempt=$((_attempt + 1))
+    if [ "$_attempt" -eq 1 ]; then
+      sleep 3
+    else
+      sleep 5
+    fi
 
-  # Re-check: another instance or cron may have fixed it
-  if tables_ok; then
+    # Re-check: another instance or cron may have fixed it
+    if tables_ok; then
+      exit 0
+    fi
+
+    # Resolve target interface (fails if no route available)
+    dev=$(resolve_target_interface) || {
+      logger -t "$LOG_TAG" "No target interface available after debounce"
+      exit 0
+    }
+
+    gw=$(resolve_target_gateway "$dev")
+    if [ -z "$gw" ] && gateway_required "$dev"; then
+      if [ "$_attempt" -ge 7 ]; then
+        logger -t "$LOG_TAG" "Gateway for $dev is not ready, routes left unchanged"
+        exit 0
+      fi
+      continue
+    fi
+
+    logger -t "$LOG_TAG" "Reconciling tables via $dev (trigger: ${system_name:-unknown})"
+    "$HOOK_DIR/update-subnets.sh" --refill &
+    "$HOOK_DIR/update-domains.sh" --refill &
+    wait
+    "$HOOK_DIR/attach-rules.sh"
     exit 0
-  fi
-
-  # Resolve target interface (fails if no route available)
-  dev=$(resolve_target_interface) || {
-    logger -t "$LOG_TAG" "No target interface available after debounce"
-    exit 0
-  }
-
-  logger -t "$LOG_TAG" "Reconciling tables via $dev (trigger: ${system_name:-unknown})"
-  "$HOOK_DIR/update-subnets.sh" --refill &
-  "$HOOK_DIR/update-domains.sh" --refill &
-  wait
-  "$HOOK_DIR/attach-rules.sh"
+  done
 } &
 
 exit 0

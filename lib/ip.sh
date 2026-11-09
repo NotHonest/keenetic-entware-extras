@@ -271,6 +271,56 @@ resolve_target_gateway() {
   echo "$gw"
 }
 
+# Ethernet needs a nexthop. Point-to-point and tunnels are reachable as dev-only.
+# Returns 0 if $1 needs a gateway, 1 if a dev-only route is valid for it.
+# ROUTE_GW=none is applied by gateway_required, not here.
+# Args: $1 - interface name
+iface_needs_gateway() {
+  case "$1" in
+    ppp*|lte*|wwan*|usb*|tun[0-9]*|tap*|ovpn*|sstp*|l2tp*|pptp*|wg[0-9]*|nwg*|awg*|gre*|vti*|ipsec*|sit*|ip6tnl*|xfrm*)
+      return 1 ;;
+  esac
+  return 0
+}
+
+# Returns 0 when fill must refuse an empty gateway, 1 when dev-only is allowed.
+# Args: $1 - interface name
+gateway_required() {
+  if [ "${ROUTE_GW:-auto}" = "none" ]; then
+    return 1
+  fi
+  iface_needs_gateway "$1"
+}
+
+# Compare the first route in a table with the wanted device and nexthop.
+# Every prefix in a table is installed with the same target, so the first route
+# stands for the table. An empty wanted gateway matches only a route with no via.
+# Args: $1 - table number, $2 - device, $3 - gateway (empty = no via)
+# Returns: 0 on match, 1 otherwise
+table_nexthop_matches() {
+  local table="$1" want_dev="$2" want_gw="${3:-}"
+  local line got_dev got_gw
+  line=$(ip route show table "$table" 2>/dev/null | head -1) || true
+  [ -n "$line" ] || return 1
+  got_dev=$(printf '%s\n' "$line" | sed -n 's/.*dev \([^ ]*\).*/\1/p')
+  got_gw=$(printf '%s\n' "$line" | sed -n 's/.*via \([^ ]*\).*/\1/p')
+  [ "$got_dev" = "$want_dev" ] || return 1
+  [ "$got_gw" = "$want_gw" ]
+}
+
+# Returns 0 when the table's live nexthop equals the configured device and gateway.
+# A required gateway that is not known yet is a mismatch: callers must not flush.
+# Args: $1 - table number
+target_nexthop_matches() {
+  local table="$1" dev gw
+  dev=$(resolve_target_interface 2>/dev/null) || return 1
+  gw=$(resolve_target_gateway "$dev")
+  if [ -z "$gw" ] && gateway_required "$dev"; then
+    return 1
+  fi
+  table_nexthop_matches "$table" "$dev" "$gw"
+}
+
 # Count routes in a routing table.
 # Uses /proc/net/fib_triestat (instant, no route dump) with fallback to wc -l.
 # Args: $1 - table number
@@ -303,7 +353,10 @@ is_table_filled() {
 # (mtime used by status.sh for table freshness display).
 # Args: $1 - table number, $2 - list file path, $3 - target device
 #        $4 - mode: "cidr" (default, each line is a CIDR) or "host" (first field + /32)
-#        $5 - gateway IP (optional; empty = dev-only route, scope link)
+#        $5 - gateway IP (optional). Empty installs a dev-only route only when
+#             the interface does not need a gateway (or ROUTE_GW=none).
+#             Otherwise the table is left untouched: a missing DHCP gateway
+#             must not replace routes with scope link.
 # Requires: IP_FULL, TABLE_STAMP_PREFIX from config.conf; list_strip, list_count from lib/lists.sh; log from lib/common.sh
 # Optional: BATCH_FILE (base path, default /tmp/geo-routes); .${table}.batch is appended
 fill_routes_batch() {
@@ -313,6 +366,14 @@ fill_routes_batch() {
   if [ ! -f "$file" ]; then
     log "fill_routes_batch: no file $file, skipping table $table"
     return 0
+  fi
+
+  # Refuse before the batch flush. Scope-link routes on ethernet blackhole LAN
+  # clients that look up this table: the prefix is on-link, so ARP never reaches
+  # the upstream router. Point-to-point interfaces have no nexthop and stay dev-only.
+  if [ -z "$gw" ] && gateway_required "$dev"; then
+    log "Gateway for $dev is not ready, table $table left unchanged"
+    return 1
   fi
 
   # Build route target: "via <gw> dev <dev>" or just "dev <dev>" (point-to-point)

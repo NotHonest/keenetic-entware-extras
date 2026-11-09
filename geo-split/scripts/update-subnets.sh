@@ -300,6 +300,10 @@ _fill_subnet_table() {
     return 0
   }
   gw=$(resolve_target_gateway "$dev")
+  if [ -z "$gw" ] && gateway_required "$dev"; then
+    log "Gateway for $dev is not ready, subnet routes left unchanged"
+    return 1
+  fi
   log "Route out: $dev${gw:+ via $gw}"
   fill_routes_batch "$SUBNET_ROUTE_TABLE" "$SUBNET_LIST_FILE" "$dev" cidr "$gw"
 }
@@ -310,7 +314,7 @@ main() {
 
   # --refill: fill table from existing cache (no download, for NDM hook UP)
   if [ "$arg" = "--refill" ]; then
-    _fill_subnet_table
+    _fill_subnet_table || return 1
     return 0
   fi
 
@@ -327,16 +331,20 @@ main() {
 
     t_end=$(date +%s)
     log "Subnet update completed ($((t_end - t_start))s)"
-    _fill_subnet_table
+    _fill_subnet_table || return 1
     return 0
   fi
 
-  # Cache fresh — only refill if table is empty (e.g. after restart)
-  if is_table_filled "$SUBNET_ROUTE_TABLE"; then
+  # Cache fresh — skip only when the live nexthop matches. A non-empty table
+  # can still be scope link from a refill that ran before the gateway existed.
+  if is_table_filled "$SUBNET_ROUTE_TABLE" && target_nexthop_matches "$SUBNET_ROUTE_TABLE"; then
     log "Subnet cache fresh, table $SUBNET_ROUTE_TABLE already filled — skipping"
     return 0
   fi
-  _fill_subnet_table
+  if is_table_filled "$SUBNET_ROUTE_TABLE"; then
+    log "Subnet table $SUBNET_ROUTE_TABLE nexthop differs, refilling"
+  fi
+  _fill_subnet_table || return 1
   return 0
 }
 
