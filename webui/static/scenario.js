@@ -151,7 +151,7 @@
             klass = viaTunnel ? "ew-scenario__check--ok" : "ew-scenario__check--bad";
             note = viaTunnel ? "через VPN" : "напрямую, не через VPN";
         } else {
-            note = viaTunnel ? "вне правила, как основной маршрут" : "вне правила, напрямую";
+            note = viaTunnel ? "вне правила, через VPN" : "вне правила, не через VPN";
         }
         return '<div class="ew-scenario__check ' + klass + '">' +
             '<div class="ew-scenario__check-host">' + esc(host) + '</div>' +
@@ -438,7 +438,7 @@
                 '<button type="button" class="ndw-button ndw-button--toggle ndw-button--small" data-scenario-advanced>Дополнительно</button>' +
                 (state.message ? '<span class="ew-scenario__status ew-scenario__status--' + esc(state.messageKind) + '">' + esc(state.message) + '</span>' : '') +
             '</div>' +
-            '<p class="ew-scenario__fine">Кнопка не меняет приоритет соединений Keenetic и не трогает DNS сегмента пылесоса. Зарубежный трафик идёт туда, куда смотрит основной маршрут. Куда привязан зарубежный DNS прямо сейчас, написано в лестнице выше. Эта страница маршрут не переключает.</p>';
+            '<p class="ew-scenario__fine">Кнопка не меняет приоритет соединений Keenetic и не трогает DNS сегмента пылесоса. У домашней сети зарубежный трафик идёт туда, куда смотрит основной маршрут. Куда привязан зарубежный DNS прямо сейчас, написано в лестнице выше. Эта страница маршрут не переключает.</p>';
     }
 
     function load() {

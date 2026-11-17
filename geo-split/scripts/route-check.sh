@@ -215,10 +215,28 @@ else
     IIF="${ROUTE_IN%% *}"
   fi
 
-  # Legacy auto-detect fwmark (CLI without --from): find first tunnel fwmark.
-  # This shows the real routing path for tunnel-policy clients. Geo-split rules (prio 50-51)
-  # are checked BEFORE fwmark rules (prio 100+), so geo-split IPs still show geo-split verdict.
+  # Interface access policy (Keenetic hotspot): packets from this iif are marked
+  # before the routing decision. Use that mark. An unmarked lookup follows the
+  # main default and hides the policy. Geo-split rules (prio 50-51) are still
+  # checked before fwmark rules.
   if [ -n "$IIF" ]; then
+    FWMARK=$(iptables -t mangle -S _NDM_HOTSPOT_PREROUTING_MANGL 2>/dev/null \
+      | awk -v iif="$IIF" '
+          $0 ~ ("-i " iif " ") && / -j MARK / && /--set-xmark 0xffff/ {
+            for (i = 1; i <= NF; i++) {
+              if ($i ~ /^0xffff[0-9a-fA-F]+\//) {
+                split($i, a, "/")
+                print a[1]
+                exit
+              }
+            }
+          }
+        ')
+  fi
+
+  # Legacy auto-detect fwmark (CLI without --from and without an interface
+  # policy): find first tunnel fwmark. Geo-split rules still win for those prefixes.
+  if [ -z "$FWMARK" ] && [ -n "$IIF" ]; then
     FWMARK=$(ip rule show 2>/dev/null | sed -n 's/.*fwmark \(0x[0-9a-f]*\) lookup \([0-9]*\).*/\1 \2/p' | while read -r m t; do
       _dev=$(ip route show table "$t" 2>/dev/null | awk '/^default/{for(i=1;i<=NF;i++) if($i=="dev"){print $(i+1); exit}}')
       if is_tunnel_iface "$_dev"; then echo "$m"; break; fi
